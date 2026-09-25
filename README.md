@@ -1,3 +1,4 @@
+[![Run DSR Engine Check](https://github.com/advabhishekkishan-tech/DPDP-GDPR-DSR-Automation-Engine/actions/workflows/run_dsr.yml/badge.svg)](https://github.com/advabhishekkishan-tech/DPDP-GDPR-DSR-Automation-Engine/actions/workflows/run_dsr.yml)
 # DPDP-GDPR-DSR-Automation-Engine
 Open-source Techno-Legal workflow engine for automating Data Subject Rights (Access &amp; Erasure) under the DPDP Act 2023 &amp; GDPR.
 # 🛡️ Techno-Legal DSR Automation Engine
