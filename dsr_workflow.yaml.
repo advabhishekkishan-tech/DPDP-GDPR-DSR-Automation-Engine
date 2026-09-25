@@ -1,0 +1,48 @@
+# Techno-Legal DSR Orchestration Engine
+# Compliant with DPDP Act 2023 (Sec 11 & 12) & GDPR (Art 15 & 17)
+
+name: DSR_Execution_Pipeline
+version: "1.0.0"
+
+trigger:
+  event: dsr_request_received
+  inputs:
+    data_subject_email: "user@example.com"
+    request_type: "ERASURE" # Options: ACCESS, ERASURE, RECTIFICATION
+    jurisdiction: "DPDP_ACT_2023" # Options: DPDP_ACT_2023, GDPR
+
+stages:
+  - stage: 1_Identity_Verification
+    action: "verify_identity_token"
+    timeout_days: 7
+    status_on_failure: "REJECT_UNVERIFIED"
+
+  - stage: 2_Legal_Hold_Check
+    action: "query_legal_hold_database"
+    rules:
+      - condition: "active_litigation_or_tax_mandate == TRUE"
+        action: "PAUSE_AND_ESCALATE_TO_LEGAL_COUNSEL"
+        reason: "Compliance with statutory retention obligations"
+
+  - stage: 3_Sensitive_Data_Discovery
+    action: "scan_systems_via_SDI"
+    target_stores:
+      - PostgreSQL_Production_DB
+      - Salesforce_CRM
+      - AWS_S3_Logs
+
+  - stage: 4_Execution_Engine
+    branching:
+      if_type_is: "ERASURE"
+      steps:
+        - execute: "anonymize_user_id"
+        - execute: "hard_delete_marketing_profiles"
+        - execute: "generate_audit_log"
+      if_type_is: "ACCESS"
+      steps:
+        - execute: "compile_data_subject_export_json"
+
+  - stage: 5_Closure_and_Notification
+    action: "send_closure_notice"
+    statutory_deadline_days: 30
+    generate_deliverable: "DSR_Audit_Certificate.pdf"
