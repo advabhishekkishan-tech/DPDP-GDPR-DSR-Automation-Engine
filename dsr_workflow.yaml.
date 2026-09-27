@@ -1,3 +1,21 @@
+```mermaid
+graph TD
+    A[📩 DSR Request Received] --> B[Stage 1: Identity Verification]
+    B -->|Verified| C{Stage 2: Active Legal Hold?}
+    B -->|Unverified / Failed| X[❌ Reject Request & Log Event]
+    
+    C -->|YES: Active Litigation / Tax Mandate| Y[⚠️ Pause Erasure & Escalate to Legal Counsel]
+    C -->|NO: Clean Record| D[Stage 3: SDI Sensitive Data Discovery]
+    
+    D --> E{Request Type?}
+    
+    E -->|ACCESS| F1[Stage 4: Compile User Data Export JSON]
+    E -->|ERASURE| F2[Stage 4: Anonymize User ID & Purge PII Across Systems]
+    
+    F1 --> G[Stage 5: Generate DSR Audit Certificate]
+    F2 --> G
+    
+    G --> H[✅ Dispatch Closure Notice within 30-Day Window]
 # Techno-Legal DSR Orchestration Engine
 # Compliant with DPDP Act 2023 (Sec 11 & 12) & GDPR (Art 15 & 17)
 
