@@ -22,3 +22,21 @@ This repository provides an open-source framework for automating **Data Subject 
 *Advocate | PrivacyOps & Corporate Compliance Specialist*  
 [LinkedIn Profile](https://linkedin.com/in/abhishek-kishan)
 python dsr_engine.py
+```mermaid
+graph TD
+    A[📩 DSR Request Received] --> B[Stage 1: Identity Verification]
+    B -->|Verified| C{Stage 2: Active Legal Hold?}
+    B -->|Unverified / Failed| X[❌ Reject Request & Log Event]
+    
+    C -->|YES: Active Litigation / Tax Mandate| Y[⚠️ Pause Erasure & Escalate to Legal Counsel]
+    C -->|NO: Clean Record| D[Stage 3: SDI Sensitive Data Discovery]
+    
+    D --> E{Request Type?}
+    
+    E -->|ACCESS| F1[Stage 4: Compile User Data Export JSON]
+    E -->|ERASURE| F2[Stage 4: Anonymize User ID & Purge PII Across Systems]
+    
+    F1 --> G[Stage 5: Generate DSR Audit Certificate]
+    F2 --> G
+    
+    G --> H[✅ Dispatch Closure Notice within 30-Day Window]
