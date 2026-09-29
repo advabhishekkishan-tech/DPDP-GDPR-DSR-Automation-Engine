@@ -1,14 +1,10 @@
-# PrivacyOps DSR Automation Engine — v2
+# PrivacyOps DSR Automation Engine
 
 **Techno-legal prototype for operationalising Data Subject Rights (DSR) workflows.**
 
-This version evolves the original simulation into a modular PrivacyOps architecture: **intake → identity assurance → jurisdictional rules → data discovery → retention/legal decision → execution → verification → tamper-evident audit**.
+This project demonstrates a modular PrivacyOps architecture: **intake → identity assurance → jurisdictional rules → data discovery → retention/legal decision → execution → verification → evidence → closure**.
 
 > **Portfolio scope:** This is a safe, in-memory prototype. It does not connect to production databases, CRM systems, cloud storage, or real data-subject records.
-
-## Why v2?
-
-The first version demonstrated the workflow concept but hard-coded a universal 30-day deadline and printed "completed" messages without performing or verifying system actions. v2 separates legal decision-making from technical execution and makes the automation claims demonstrable within mock connectors.
 
 ## Architecture
 
@@ -27,7 +23,8 @@ Multi-System Discovery
     ▼
 Retention & Legal Decision
     ├── ERASE
-    ├── ANONYMIZE / RESTRICT
+    ├── ANONYMIZE
+    ├── RESTRICT
     └── ESCALATE
     │
     ▼
@@ -35,6 +32,9 @@ Mock Connector Execution
     │
     ▼
 Post-Execution Verification
+    │
+    ▼
+Response / Evidence Package
     │
     ▼
 Hash-Chained Audit Ledger
@@ -45,24 +45,27 @@ Closure Status
 
 ## Key capabilities
 
-- **Config-driven deadlines:** GDPR timing is represented as configuration rather than embedded in business logic. DPDP is intentionally left configurable rather than assigned a universal hard-coded DSR deadline.
-- **Risk-based identity assurance:** the prototype requires an assurance level and rejects insufficient assurance.
-- **Multi-system discovery:** mock connectors represent CRM, database and archive systems without touching real infrastructure.
-- **Retention/legal decision layer:** litigation, regulatory and tax tags can preserve data; analytics can trigger anonymisation; other records can be erased.
-- **Partial outcomes:** records can be escalated or handled with restriction/anonymisation instead of treating legal hold as a simple global Boolean.
-- **Deletion verification:** an erase operation is followed by an explicit check that the record is absent.
+- **Config-driven deadlines:** jurisdictional timing is represented as configuration rather than embedded in business logic.
+- **Risk-based identity assurance:** insufficient assurance prevents fulfillment.
+- **Multi-system discovery:** mock connectors represent database, CRM and archive systems without touching real infrastructure.
+- **Record-level retention decisions:** preservation, restriction, anonymisation and erasure can be decided per record.
+- **Real partial execution:** anonymisation and processing restriction mutate the mock system and are independently verified.
+- **Access response package:** access requests produce a structured package showing source system and returned data.
+- **Deletion verification:** an erase operation is followed by an explicit absence check.
 - **Tamper-evident audit:** events are hash-chained using SHA-256 and the chain can be integrity-checked.
+- **Duplicate-request detection:** a lightweight case registry prevents the same subject/request-type combination from being registered twice.
 - **Automated tests + CI:** pytest scenarios run through GitHub Actions.
 
 ## Repository
 
 ```
 src/
-  models.py       # Request, record and execution models
-  rules.py        # Jurisdiction + retention decision layer
-  connectors.py   # Safe in-memory enterprise connectors
-  engine.py       # PrivacyOps orchestration
-  audit.py        # Hash-chained audit ledger
+  models.py          # Request, record, execution and role models
+  rules.py           # Jurisdiction + retention decision layer
+  connectors.py      # Safe in-memory enterprise connectors
+  engine.py          # PrivacyOps orchestration
+  audit.py           # Hash-chained audit ledger
+  case_management.py # Duplicate-request detection
 config/
   rules.yaml
   scenarios.yaml
@@ -76,17 +79,18 @@ run_engine.py
 
 ```bash
 pip install -r requirements.txt
-pytest -q
+python -m pytest -q
 python run_engine.py
 ```
 
 ## Example decision
 
-A request can discover:
+A single request can discover:
 
-- CRM record → anonymise
-- archive record under litigation hold → escalate to legal review
-- ordinary production record → erase and verify absence
+- ordinary production record → erase + verify absence
+- analytics record → anonymise + verify transformation
+- security-investigation record → restrict processing + verify restriction
+- archive record under litigation retention → escalate for legal review
 
 The engine records the **legal decision, technical action and verification evidence** separately.
 
@@ -99,11 +103,11 @@ The goal is not to replace legal judgement. The goal is to make a documented leg
 ## Roadmap
 
 - real PostgreSQL/Salesforce/S3 adapters behind the connector interface
-- DSR response-package composer with redaction controls
+- stronger access-package redaction and third-party data handling
 - processor/subprocessor orchestration
 - RBAC and approval workflows
-- request deduplication and case management
-- governed versioning of jurisdictional rules
+- persistent case management and duplicate detection
+- governed versioning and approval of jurisdictional rules
 - DPIA / risk-assessment module
 - API layer and web dashboard
 
@@ -111,4 +115,3 @@ The goal is not to replace legal judgement. The goal is to make a documented leg
 
 **Abhishek Kishan**  
 Advocate | PrivacyOps & Data Protection
-
