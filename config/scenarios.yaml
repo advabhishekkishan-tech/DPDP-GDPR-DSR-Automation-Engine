@@ -1,0 +1,13 @@
+scenarios:
+  - id: happy_erasure
+    type: ERASURE
+    jurisdiction: GDPR
+    identity_assurance: 3
+  - id: legal_hold
+    type: ERASURE
+    jurisdiction: GDPR
+    identity_assurance: 3
+  - id: failed_identity
+    type: ACCESS
+    jurisdiction: GDPR
+    identity_assurance: 1
