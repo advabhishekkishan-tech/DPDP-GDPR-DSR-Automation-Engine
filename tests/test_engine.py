@@ -117,3 +117,22 @@ def test_gdpr_deadline_is_configured_not_hardcoded():
     engine, _ = make_engine([])
     result = engine.run()
     assert result["deadline"] == date(2026, 10, 29)
+
+
+def test_duplicate_request_is_detected():
+    from src.case_management import RequestRegistry
+
+    registry = RequestRegistry()
+    assert registry.register("DSR-1", "USER@example.com", "ERASURE") is True
+    assert registry.register("DSR-2", "user@example.com", "ERASURE") is False
+    assert registry.existing_request("user@example.com", "ERASURE") == "DSR-1"
+
+
+def test_access_package_is_audited():
+    engine, _ = make_engine([
+        DataRecord("CRM", "1", {"email": "user@example.com", "name": "A"})
+    ], RequestType.ACCESS)
+    result = engine.run()
+    events = [e["event"] for e in result["audit"]]
+    assert "EXECUTION" in events
+    assert "CLOSURE" in events
