@@ -2,7 +2,7 @@ name: PrivacyOps Engine CI
 
 on:
   push:
-    branches: ["main", "v2-privacyops-engine"]
+    branches: ["main"]
   pull_request:
   workflow_dispatch:
 
@@ -15,5 +15,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - run: pytest -q
+      - run: python -m pytest -q
       - run: python run_engine.py
