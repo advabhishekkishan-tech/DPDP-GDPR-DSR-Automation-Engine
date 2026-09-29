@@ -16,6 +16,13 @@ class Decision(str, Enum):
     REJECT = "REJECT"
 
 
+class ActorRole(str, Enum):
+    REQUESTER = "REQUESTER"
+    PRIVACY_ANALYST = "PRIVACY_ANALYST"
+    LEGAL_REVIEWER = "LEGAL_REVIEWER"
+    ADMIN = "ADMIN"
+
+
 @dataclass
 class DSRRequest:
     request_id: str
