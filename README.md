@@ -1,42 +1,114 @@
-[![Run DSR Engine Check](https://github.com/advabhishekkishan-tech/DPDP-GDPR-DSR-Automation-Engine/actions/workflows/run_dsr.yml/badge.svg)](https://github.com/advabhishekkishan-tech/DPDP-GDPR-DSR-Automation-Engine/actions/workflows/run_dsr.yml)
-# DPDP-GDPR-DSR-Automation-Engine
-Open-source Techno-Legal workflow engine for automating Data Subject Rights (Access &amp; Erasure) under the DPDP Act 2023 &amp; GDPR.
-# 🛡️ Techno-Legal DSR Automation Engine
-*Automating Data Subject Rights under DPDP Act 2023, GDPR, and RBI IT Security Guidelines*
+# PrivacyOps DSR Automation Engine — v2
 
-## 📌 Project Overview
-This repository provides an open-source framework for automating **Data Subject Access & Erasure Requests (DSAR/DSR)**. It bridges regulatory requirements with automated software execution pipelines.
+**Techno-legal prototype for operationalising Data Subject Rights (DSR) workflows.**
 
-### 🔑 Key Compliance & Engineering Features
-- **Statutory Deadline Management:** Automatically tracks the 30-day fulfillment window (GDPR Art 12 / DPDP Act Sec 11).
-- **Legal Hold Gatekeeping:** Prevents automated deletion if user data is subject to pending court litigation, regulatory investigations, or statutory tax retention rules.
-- **Multi-System Discovery:** Maps endpoints across production databases, CRM applications, and cloud storage systems using Sensitive Data Intelligence (SDI) principles.
-- **Audit Logging:** Generates immutable execution trails for regulatory compliance reviews.
+This version evolves the original simulation into a modular PrivacyOps architecture: **intake → identity assurance → jurisdictional rules → data discovery → retention/legal decision → execution → verification → tamper-evident audit**.
 
-## 📁 Repository Structure
-- `dsr_workflow.yaml` — Declarative YAML pipeline defining identity verification, legal checks, and deletion stages.
-- `dsr_engine.py` — Python simulation engine executing DSR processing logic.
+> **Portfolio scope:** This is a safe, in-memory prototype. It does not connect to production databases, CRM systems, cloud storage, or real data-subject records.
 
-## 👤 Author
+## Why v2?
+
+The first version demonstrated the workflow concept but hard-coded a universal 30-day deadline and printed "completed" messages without performing or verifying system actions. v2 separates legal decision-making from technical execution and makes the automation claims demonstrable within mock connectors.
+
+## Architecture
+
+```
+DSR Request
+    │
+    ▼
+Identity Assurance ──fail──> Reject + Audit
+    │
+    ▼
+Jurisdiction / Rules Engine
+    │
+    ▼
+Multi-System Discovery
+    │
+    ▼
+Retention & Legal Decision
+    ├── ERASE
+    ├── ANONYMIZE / RESTRICT
+    └── ESCALATE
+    │
+    ▼
+Mock Connector Execution
+    │
+    ▼
+Post-Execution Verification
+    │
+    ▼
+Hash-Chained Audit Ledger
+    │
+    ▼
+Closure Status
+```
+
+## Key capabilities
+
+- **Config-driven deadlines:** GDPR timing is represented as configuration rather than embedded in business logic. DPDP is intentionally left configurable rather than assigned a universal hard-coded DSR deadline.
+- **Risk-based identity assurance:** the prototype requires an assurance level and rejects insufficient assurance.
+- **Multi-system discovery:** mock connectors represent CRM, database and archive systems without touching real infrastructure.
+- **Retention/legal decision layer:** litigation, regulatory and tax tags can preserve data; analytics can trigger anonymisation; other records can be erased.
+- **Partial outcomes:** records can be escalated or handled with restriction/anonymisation instead of treating legal hold as a simple global Boolean.
+- **Deletion verification:** an erase operation is followed by an explicit check that the record is absent.
+- **Tamper-evident audit:** events are hash-chained using SHA-256 and the chain can be integrity-checked.
+- **Automated tests + CI:** pytest scenarios run through GitHub Actions.
+
+## Repository
+
+```
+src/
+  models.py       # Request, record and execution models
+  rules.py        # Jurisdiction + retention decision layer
+  connectors.py   # Safe in-memory enterprise connectors
+  engine.py       # PrivacyOps orchestration
+  audit.py        # Hash-chained audit ledger
+config/
+  rules.yaml
+  scenarios.yaml
+tests/
+  test_engine.py
+run_engine.py
+.github/workflows/run_dsr.yml
+```
+
+## Run locally
+
+```bash
+pip install -r requirements.txt
+pytest -q
+python run_engine.py
+```
+
+## Example decision
+
+A request can discover:
+
+- CRM record → anonymise
+- archive record under litigation hold → escalate to legal review
+- ordinary production record → erase and verify absence
+
+The engine records the **legal decision, technical action and verification evidence** separately.
+
+## PrivacyOps design principle
+
+The goal is not to replace legal judgement. The goal is to make a documented legal decision **operational, repeatable and auditable**.
+
+**Legal decision → Technical control → Evidence**
+
+## Roadmap
+
+- real PostgreSQL/Salesforce/S3 adapters behind the connector interface
+- DSR response-package composer with redaction controls
+- processor/subprocessor orchestration
+- RBAC and approval workflows
+- request deduplication and case management
+- governed versioning of jurisdictional rules
+- DPIA / risk-assessment module
+- API layer and web dashboard
+
+## Author
+
 **Abhishek Kishan**  
-*Advocate | PrivacyOps & Corporate Compliance Specialist*  
-[LinkedIn Profile](https://linkedin.com/in/abhishek-kishan)
-python dsr_engine.py
-```mermaid
-graph TD
-    A[📩 DSR Request Received] --> B[Stage 1: Identity Verification]
-    B -->|Verified| C{Stage 2: Active Legal Hold?}
-    B -->|Unverified / Failed| X[❌ Reject Request & Log Event]
-    
-    C -->|YES: Active Litigation / Tax Mandate| Y[⚠️ Pause Erasure & Escalate to Legal Counsel]
-    C -->|NO: Clean Record| D[Stage 3: SDI Sensitive Data Discovery]
-    
-    D --> E{Request Type?}
-    
-    E -->|ACCESS| F1[Stage 4: Compile User Data Export JSON]
-    E -->|ERASURE| F2[Stage 4: Anonymize User ID & Purge PII Across Systems]
-    
-    F1 --> G[Stage 5: Generate DSR Audit Certificate]
-    F2 --> G
-    
-    G --> H[✅ Dispatch Closure Notice within 30-Day Window]
+Advocate | PrivacyOps & Data Protection
+
