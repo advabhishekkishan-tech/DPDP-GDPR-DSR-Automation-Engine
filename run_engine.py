@@ -17,7 +17,7 @@ records = [
     DataRecord("Archive", "arc-001", {"email": "user@example.com", "case_ref": "LIT-42"}, ["litigation"]),
 ]
 
-request = DSRRequest("DSR-2026-V2-001", "user@example.com",
+request = DSRRequest("DSR-2026-001", "user@example.com",
                      RequestType.ERASURE, "GDPR", date.today())
 
 engine = PrivacyOpsEngine(
@@ -32,7 +32,7 @@ engine = PrivacyOpsEngine(
 )
 
 result = engine.run(assurance_level=3)
-print("=== PRIVACYOPS DSR ENGINE V2 ===")
+print("=== PRIVACYOPS DSR ENGINE ===")
 print(f"Request: {request.request_id}")
 print(f"Status: {result['status']}")
 print(f"Deadline: {result['deadline']}")
