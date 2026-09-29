@@ -1,0 +1,21 @@
+jurisdictions:
+  GDPR:
+    response_days: 30
+    extension_days: 60
+    notes: "Prototype configuration for GDPR one-month response period; extension requires applicable conditions."
+  DPDP:
+    response_days: null
+    extension_days: 0
+    notes: "Keep configurable; do not hard-code a universal statutory DSR deadline in this prototype."
+
+retention_rules:
+  litigation:
+    action: PRESERVE
+  regulatory:
+    action: PRESERVE
+  tax:
+    action: PRESERVE
+  security_investigation:
+    action: RESTRICT
+  analytics:
+    action: ANONYMIZE
