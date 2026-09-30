@@ -1,5 +1,7 @@
+from datetime import datetime, timezone
+
 from .audit import AuditLedger
-from datetime import datetime, timezone\n\nfrom .models import ConsentRecord, ConsentStatus, ProcessingSystem, PropagationResult
+from .models import ConsentRecord, ConsentStatus, ProcessingSystem, PropagationResult
 
 
 class ConsentLedger:
@@ -32,9 +34,7 @@ class ConsentLedger:
         if consent.status == ConsentStatus.WITHDRAWN:
             return consent
         consent.status = ConsentStatus.WITHDRAWN
-        consent.withdrawn_at = __import__("datetime").datetime.now(
-            __import__("datetime").timezone.utc
-        )
+        consent.withdrawn_at = datetime.now(timezone.utc)
         self._record_history(consent, "WITHDRAWN", audit)
         return consent
 
@@ -71,8 +71,6 @@ class ConsentPropagationEngine:
         for system in self.systems:
             purpose_match = system.purpose == consent.purpose
             category_match = bool(set(system.data_categories) & set(consent.data_categories))
-            subject_scope = consent.subject_email in system.system
-
             if not purpose_match or not category_match:
                 continue
 
