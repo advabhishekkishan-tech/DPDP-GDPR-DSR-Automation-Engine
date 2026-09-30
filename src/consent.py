@@ -1,5 +1,5 @@
 from .audit import AuditLedger
-from .models import ConsentRecord, ConsentStatus, ProcessingSystem, PropagationResult
+from datetime import datetime, timezone\n\nfrom .models import ConsentRecord, ConsentStatus, ProcessingSystem, PropagationResult
 
 
 class ConsentLedger:
