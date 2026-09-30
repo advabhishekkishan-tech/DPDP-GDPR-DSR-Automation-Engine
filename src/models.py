@@ -49,3 +49,42 @@ class ExecutionResult:
     success: bool
     verified: bool
     detail: str
+
+
+class ConsentStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    WITHDRAWN = "WITHDRAWN"
+    EXPIRED = "EXPIRED"
+
+
+@dataclass
+class ConsentRecord:
+    consent_id: str
+    subject_email: str
+    fiduciary: str
+    purpose: str
+    data_categories: list[str]
+    status: ConsentStatus = ConsentStatus.ACTIVE
+    granted_at: Any = None
+    withdrawn_at: Any = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ProcessingSystem:
+    system: str
+    purpose: str
+    data_categories: list[str]
+    processor: str | None = None
+    consent_required: bool = True
+    consent_active: bool = True
+
+
+@dataclass
+class PropagationResult:
+    system: str
+    processor: str | None
+    action: str
+    success: bool
+    verified: bool
+    detail: str
