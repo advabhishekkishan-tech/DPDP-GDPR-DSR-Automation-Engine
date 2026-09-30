@@ -45,6 +45,31 @@ Hash-Chained Audit Ledger
 Closure Status
 ```
 
+### Governance and processor workflow
+
+```
+High-impact Privacy Action
+        │
+        ▼
+  Approval Request
+        │
+        ▼
+   RBAC Check ──fail──> Deny + Audit
+        │
+        ▼
+   Human Approval
+        │
+        ▼
+Controller → Processor
+        │
+        ├── acknowledgement
+        ├── retry handling
+        └── verification / pending state
+        │
+        ▼
+   Audit Evidence
+```
+
 ### Consent lifecycle workflow
 
 ```
@@ -102,6 +127,8 @@ Consent Ledger
 - **Processing-basis distinction:** systems marked as not consent-dependent are not automatically disabled by a consent withdrawal.
 - **Post-propagation verification:** each affected system produces a verification result.
 - **Consent-specific audit evidence:** grant, review, withdrawal, propagation and verification events are written to the hash-chained audit ledger.
+- **RBAC and approvals:** high-impact actions are permission-checked and approval decisions are auditable.
+- **Processor orchestration:** downstream processors can be propagated to with acknowledgement, retry and failure states.
 
 ## Repository
 
@@ -112,6 +139,8 @@ src/
   connectors.py      # Safe in-memory enterprise connectors
   engine.py          # DSR PrivacyOps orchestration
   consent.py         # Consent lifecycle + withdrawal propagation
+  governance.py      # RBAC + approval workflow
+  processors.py      # Processor acknowledgement + retry orchestration
   audit.py            # Hash-chained audit ledger
   case_management.py # Duplicate-request detection
 config/
@@ -136,6 +165,9 @@ python run_engine.py
 
 # Consent workflow
 python run_consent.py
+
+# Governance + processor orchestration
+python run_governance.py
 ```
 
 ## Example consent scenario
