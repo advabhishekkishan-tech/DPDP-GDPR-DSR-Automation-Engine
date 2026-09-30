@@ -18,3 +18,4 @@ jobs:
       - run: python -m pytest -q
       - run: python run_engine.py
       - run: python run_consent.py
+      - run: python run_governance.py
