@@ -235,53 +235,47 @@ The current implementation uses in-memory state and simulated connectors. A prod
 Advocate | PrivacyOps & Data Protection
 
 
-## Functional web application
+## Functional PrivacyOps application
 
-The repository now includes a lightweight web application around the existing PrivacyOps engine.
+The repository now includes a local case-management application built on top of the existing DSR, governance, consent, processor and audit components.
 
-### Start the application
+### Run locally
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
 Open `http://127.0.0.1:8000`.
 
-The web interface currently allows a user to submit a demo DSR and observe:
+### What the application does
 
-```
-Request
-  ↓
-Identity assurance
-  ↓
-Jurisdiction / rules
-  ↓
-Multi-system discovery
-  ↓
-Record-level legal decision
-  ↓
-Technical execution
-  ↓
-Verification
-  ↓
-Audit evidence
+- Create and persist DSR cases in a local SQLite database.
+- Run identity assurance, jurisdiction/rule evaluation, multi-system discovery, record-level legal decisions, technical actions and verification.
+- View case history and hash-chained audit evidence.
+- Record reviewer approvals through the RBAC/approval layer.
+- Simulate controller-to-processor propagation and acknowledgement/retry outcomes.
+- Register and withdraw consent records through a simple consent operations screen.
+- Expose API endpoints suitable for later integration with real enterprise systems.
+
+### Docker
+
+```bash
+docker build -t privacyops-dsr-lab .
+docker run -p 8000:8000 privacyops-dsr-lab
 ```
 
-The application exposes a small API as well:
+### Safety / scope
 
-- `GET /health`
-- `POST /api/dsr/run`
+This is a portfolio-grade functional prototype. It uses demo data and mock enterprise connectors; it is not a production privacy platform and must not be connected to live personal data without security, authentication, authorization, privacy, resilience and legal controls appropriate to the deployment.
 
-This is intentionally a **functional demo application**, not a production privacy platform. The UI uses the same in-memory engine and mock connectors already used by the CLI workflows, so no real personal data or enterprise systems are accessed.
+### Next engineering increments
 
-### Application roadmap
-
-- persistent case database
-- case dashboard and lifecycle states
-- reviewer approval queue connected to the governance engine
-- consent-management screens connected to the consent ledger
-- processor/subprocessor acknowledgement view
-- downloadable evidence package
-- authenticated users and role-based access
-- API documentation and deployment configuration
+- Real authentication and role management.
+- Durable enterprise database and migrations.
+- Connector interface for real databases, CRMs, storage and processor APIs.
+- Stronger access-package redaction and authorization.
+- Downloadable evidence packages.
+- Deployment hardening and observability.
