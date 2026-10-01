@@ -1,78 +1,47 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PrivacyOps DSR Lab</title>
-  <style>
-    body{font-family:Inter,system-ui,sans-serif;background:#f4f7fb;color:#172033;margin:0}
-    header{background:#172033;color:white;padding:28px 7%}
-    main{max-width:1100px;margin:32px auto;padding:0 20px}
-    .grid{display:grid;grid-template-columns:340px 1fr;gap:22px}
-    .card{background:white;border:1px solid #dce3ee;border-radius:14px;padding:22px;box-shadow:0 5px 18px #17203312}
-    label{display:block;font-weight:600;margin:14px 0 6px}
-    input,select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #cbd5e1;border-radius:8px}
-    button{margin-top:18px;width:100%;padding:12px;border:0;border-radius:8px;background:#2457d6;color:white;font-weight:700;cursor:pointer}
-    .status{display:inline-block;padding:6px 10px;border-radius:999px;background:#e8eefc;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:15px} th,td{text-align:left;padding:10px;border-bottom:1px solid #e5e7eb}
-    pre{background:#101827;color:#dbeafe;padding:15px;border-radius:9px;overflow:auto;font-size:12px}
-    .muted{color:#64748b}.flow{font-weight:700;line-height:2}
-    @media(max-width:800px){.grid{grid-template-columns:1fr}}
-  </style>
-</head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PrivacyOps DSR Lab</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:14px Inter,system-ui,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#111827;color:#fff;padding:24px 5%}header h1{margin:0 0 6px;font-size:25px}header p{margin:0;color:#cbd5e1}
+nav{display:flex;gap:8px;padding:14px 5%;background:#fff;border-bottom:1px solid #e2e8f0}nav button{background:#eef2ff;color:#243b7a;border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
+main{max-width:1200px;margin:25px auto;padding:0 18px}.grid{display:grid;grid-template-columns:360px 1fr;gap:20px}
+.card{background:#fff;border:1px solid #dbe3ee;border-radius:14px;padding:20px;box-shadow:0 5px 20px #11182710;margin-bottom:20px}
+label{display:block;font-weight:700;margin:12px 0 6px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+.primary{width:100%;padding:11px;margin-top:15px;border:0;border-radius:8px;background:#2457d6;color:#fff;font-weight:700;cursor:pointer}
+.secondary{padding:8px 11px;border:0;border-radius:7px;background:#e8eefc;color:#243b7a;cursor:pointer}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px;border-bottom:1px solid #e5e7eb;vertical-align:top}.pill{padding:5px 9px;border-radius:99px;background:#eef2ff;font-weight:700}
+pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:auto;max-height:420px}.muted{color:#64748b}.hidden{display:none}
+.flow{padding:12px;background:#f8fafc;border-radius:9px;font-weight:700;margin:15px 0;line-height:1.8}
+@media(max-width:850px){.grid{grid-template-columns:1fr}nav{overflow:auto}}
+</style></head>
 <body>
-<header>
-  <h1>PrivacyOps DSR Lab</h1>
-  <p>Legal decision → Technical control → Verification → Evidence</p>
-</header>
+<header><h1>PrivacyOps DSR Lab</h1><p>Legal decision → Technical control → Verification → Evidence</p></header>
+<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button></nav>
 <main>
-  <div class="grid">
-    <section class="card">
-      <h2>Create DSR case</h2>
-      <label>Subject email</label>
-      <input id="email" value="user@example.com">
-      <label>Request type</label>
-      <select id="type"><option value="ERASURE">Erasure</option><option value="ACCESS">Access</option></select>
-      <label>Jurisdiction</label>
-      <select id="jurisdiction"><option>GDPR</option><option>DPDP</option></select>
-      <label>Identity assurance</label>
-      <select id="assurance"><option>3</option><option>2</option><option>1</option></select>
-      <button onclick="runCase()">Run PrivacyOps workflow</button>
-      <p class="muted">Demo data only. No real systems are connected.</p>
-    </section>
-    <section class="card">
-      <h2>Case result</h2>
-      <div id="empty" class="muted">Run a case to see discovery, legal decisions, execution and evidence.</div>
-      <div id="result" hidden>
-        <p>Case: <strong id="caseId"></strong></p>
-        <p>Status: <span class="status" id="status"></span></p>
-        <p>Deadline: <span id="deadline"></span></p>
-        <div class="flow">Request → Identity → Discovery → Legal Decision → Execution → Verification → Audit</div>
-        <table><thead><tr><th>System</th><th>Action</th><th>Success</th><th>Verified</th><th>Detail</th></tr></thead><tbody id="rows"></tbody></table>
-        <h3>Audit integrity</h3><p id="integrity"></p>
-        <details><summary>View audit evidence</summary><pre id="audit"></pre></details>
-      </div>
-    </section>
-  </div>
+<section id="dashboard" class="view"><div class="card"><h2>Case dashboard</h2><div id="cases"></div></div></section>
+<section id="new" class="view hidden"><div class="grid"><div class="card"><h2>Create DSR case</h2>
+<label>Subject email</label><input id="email" value="user@example.com"><label>Request type</label>
+<select id="type"><option>ERASURE</option><option>ACCESS</option></select><label>Jurisdiction</label>
+<select id="jurisdiction"><option>GDPR</option><option>DPDP</option></select><label>Identity assurance</label>
+<select id="assurance"><option>3</option><option>2</option><option>1</option></select><button class="primary" onclick="createCase()">Create & run case</button>
+<p class="muted">Demo data only. No real enterprise systems are connected.</p></div><div id="newResult"></div></div></section>
+<section id="consent" class="view hidden"><div class="card"><h2>Consent operations</h2>
+<label>Subject email</label><input id="cemail" value="user@example.com"><label>Purpose</label><input id="purpose" value="marketing">
+<label>Data categories</label><input id="categories" value="email,phone"><button class="primary" onclick="createConsent()">Register consent</button><div id="consents" style="margin-top:20px"></div></div></section>
 </main>
 <script>
-async function runCase(){
-  const button=document.querySelector('button'); button.disabled=true; button.textContent='Running...';
-  try{
-    const response=await fetch('/api/dsr/run',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({subject_email:document.getElementById('email').value,request_type:document.getElementById('type').value,
-        jurisdiction:document.getElementById('jurisdiction').value,assurance_level:Number(document.getElementById('assurance').value)})});
-    const data=await response.json();
-    if(!response.ok) throw new Error(data.detail||'Request failed');
-    document.getElementById('empty').hidden=true; document.getElementById('result').hidden=false;
-    document.getElementById('caseId').textContent=data.request_id;
-    document.getElementById('status').textContent=data.status;
-    document.getElementById('deadline').textContent=data.deadline||'Not configured';
-    document.getElementById('rows').innerHTML=data.results.map(r=>'<tr><td>'+r.system+'</td><td>'+r.action+'</td><td>'+r.success+'</td><td>'+r.verified+'</td><td>'+r.detail+'</td></tr>').join('');
-    document.getElementById('integrity').textContent=data.audit_integrity?'✓ Hash chain verified':'✗ Integrity check failed';
-    document.getElementById('audit').textContent=JSON.stringify(data.audit,null,2);
-  }catch(e){alert(e.message)} finally{button.disabled=false;button.textContent='Run PrivacyOps workflow'}
-}
-</script>
-</body>
-</html>
+const $=id=>document.getElementById(id);
+function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='dashboard')loadCases();if(id==='consent')loadConsents()}
+async function api(url,opts={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json();if(!r.ok)throw Error(d.detail||'Request failed');return d}
+async function loadCases(){const c=await api('/api/cases');$('cases').innerHTML=c.length?'<table><tr><th>Case</th><th>Type</th><th>Jurisdiction</th><th>Status</th><th></th></tr>'+c.map(x=>'<tr><td>'+x.id+'</td><td>'+x.request_type+'</td><td>'+x.jurisdiction+'</td><td><span class="pill">'+x.status+'</span></td><td><button class="secondary" onclick="detail(\''+x.id+'\')">Open</button></td></tr>').join('')+'</table>':'<p class="muted">No cases yet.</p>'}
+async function createCase(){try{const d=await api('/api/cases',{method:'POST',body:JSON.stringify({subject_email:$('email').value,request_type:$('type').value,jurisdiction:$('jurisdiction').value,assurance_level:+$('assurance').value})});renderDetail(d,'newResult');loadCases()}catch(e){alert(e.message)}}
+async function detail(id){try{const d=await api('/api/cases/'+id);renderDetail(d,'newResult');show('new')}catch(e){alert(e.message)}}
+function renderDetail(d,target){$(target).innerHTML='<div class="card"><h2>Case '+d.id+'</h2><p>Status: <span class="pill">'+d.status+'</span></p><div class="flow">Request → Identity → Discovery → Legal Decision → Execution → Verification → Audit</div><table><tr><th>System</th><th>Action</th><th>Success</th><th>Verified</th><th>Detail</th></tr>'+d.results.map(r=>'<tr><td>'+r.system+'</td><td>'+r.action+'</td><td>'+r.success+'</td><td>'+r.verified+'</td><td>'+r.detail+'</td></tr>').join('')+'</table><p><b>Audit integrity:</b> '+(d.audit_integrity?'✓ Verified':'✗ Failed')+'</p><button class="secondary" onclick="approve(\''+d.id+'\')">Legal review / approval</button> <button class="secondary" onclick="processors(\''+d.id+'\')">Propagate to processors</button><details style="margin-top:15px"><summary>Evidence</summary><pre>'+JSON.stringify(d.audit,null,2)+'</pre></details></div>'}
+async function approve(id){const role=prompt('Reviewer role: LEGAL_REVIEWER or PRIVACY_ANALYST','LEGAL_REVIEWER');if(!role)return;try{const d=await api('/api/cases/'+id+'/approvals',{method:'POST',body:JSON.stringify({action:'LEGAL_REVIEW',role,approved:true,reason:'Reviewed from PrivacyOps case dashboard'})});alert(JSON.stringify(d,null,2));detail(id)}catch(e){alert(e.message)}}
+async function processors(id){try{const d=await api('/api/cases/'+id+'/processors',{method:'POST'});alert(JSON.stringify(d,null,2));detail(id)}catch(e){alert(e.message)}}
+async function loadConsents(){const c=await api('/api/consents');$('consents').innerHTML=c.length?'<table><tr><th>ID</th><th>Purpose</th><th>Status</th><th></th></tr>'+c.map(x=>'<tr><td>'+x.id+'</td><td>'+x.purpose+'</td><td>'+x.status+'</td><td>'+(x.status==='ACTIVE'?'<button class="secondary" onclick="withdraw(\''+x.id+'\')">Withdraw</button>':'')+'</td></tr>').join('')+'</table>':'<p class="muted">No consent records.</p>'}
+async function createConsent(){try{await api('/api/consents',{method:'POST',body:JSON.stringify({subject_email:$('cemail').value,purpose:$('purpose').value,data_categories:$('categories').value.split(',').map(x=>x.trim()).filter(Boolean)})});loadConsents()}catch(e){alert(e.message)}}
+async function withdraw(id){try{const d=await api('/api/consents/'+id+'/withdraw',{method:'POST'});alert(JSON.stringify(d,null,2));loadConsents()}catch(e){alert(e.message)}}
+loadCases();
+</script></body></html>
