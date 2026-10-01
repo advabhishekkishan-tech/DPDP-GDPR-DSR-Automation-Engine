@@ -30,7 +30,7 @@ def test_access_dsr_produces_verified_response_package():
     )
     assert r.status_code == 200
     case = r.json()
-    assert case["status"] == "ESCALATED"
+    assert case["status"] == "FULFILLED"
     assert case["audit_integrity"] is True
     assert case["response_package"]["data"]
     assert all(
