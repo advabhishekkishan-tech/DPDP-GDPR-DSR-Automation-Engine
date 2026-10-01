@@ -357,11 +357,13 @@ def withdraw_consent(consent_id: str):
     if not row:
         raise HTTPException(404, "Consent not found")
     if row["status"] == ConsentStatus.WITHDRAWN.value:
+        audit = AuditLedger()
+        audit.events = json.loads(row["audit_json"])
         return {
             "consent_id": consent_id,
-            "status": "WITHDRAWN",
+            "status": ConsentStatus.WITHDRAWN.value,
             "propagation": json.loads(row["propagation_json"]),
-            "audit_integrity": AuditLedger(),
+            "audit_integrity": audit.verify_integrity(),
         }
 
     consent = consent_from_row(row)
