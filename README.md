@@ -4,7 +4,7 @@
 
 This project demonstrates a modular PrivacyOps architecture for turning privacy obligations into repeatable technical workflows and evidence.
 
-> **Portfolio scope:** This is a safe, in-memory prototype. It does not connect to production databases, CRM systems, cloud storage, Consent Managers, processors, or real data-subject records. It is not a registered Consent Manager or a production compliance platform.
+> **Portfolio scope:** This is a safe, local portfolio prototype. The web application persists demo case and consent metadata in a local SQLite database and uses mock enterprise connectors. It does not connect to production databases, CRM systems, cloud storage, Consent Managers, processors, or real data-subject records. It is not a registered Consent Manager or a production compliance platform.
 
 ## Architecture
 
@@ -111,10 +111,10 @@ Consent Ledger
 - **Multi-system discovery:** mock connectors represent database, CRM and archive systems without touching real infrastructure.
 - **Record-level retention decisions:** preservation, restriction, anonymisation and erasure can be decided per record.
 - **Real partial execution:** anonymisation and processing restriction mutate the mock system and are independently verified.
-- **Access response package:** access requests produce a structured package showing source system and returned data.
+- **Access response package:** access requests produce a structured package showing source system and returned demo data, with post-export subject matching verification.
 - **Deletion verification:** an erase operation is followed by an explicit absence check.
 - **Tamper-evident audit:** events are hash-chained using SHA-256 and the chain can be integrity-checked.
-- **Duplicate-request detection:** a lightweight case registry prevents the same subject/request-type combination from being registered twice.
+- **Duplicate-request detection:** the web application rejects an exact subject/request-type/jurisdiction duplicate with HTTP 409; the standalone registry remains available as a reusable prototype component.
 - **Automated tests + CI:** pytest scenarios run through GitHub Actions.
 
 ### Consent Management prototype
@@ -204,7 +204,7 @@ The goal is not to replace legal judgement. The goal is to make a documented pri
 
 This repository deliberately does **not** claim production compliance or regulatory registration.
 
-The current implementation uses in-memory state and simulated connectors. A production architecture would require, among other things:
+The current implementation uses local SQLite for the web application's case/consent metadata, in-memory mock connectors for enterprise records, and simulated processor endpoints. A production architecture would require, among other things:
 
 - authenticated APIs and real system adapters
 - persistent case and consent storage
@@ -279,3 +279,24 @@ This is a portfolio-grade functional prototype. It uses demo data and mock enter
 - Stronger access-package redaction and authorization.
 - Downloadable evidence packages.
 - Deployment hardening and observability.
+
+
+## Public-repository security posture
+
+The repository is intentionally safe to publish as a portfolio project because it uses demo records, mock connectors and local-only storage. The application does **not** contain production credentials or connect to live enterprise systems.
+
+The web UI adds basic browser hardening headers and escapes API-derived values before inserting them into HTML. The application remains deliberately unauthenticated and should be treated as **local/demo software only** unless authentication, authorization, deployment isolation, secure secret handling and operational controls are added.
+
+Before any public deployment, review GitHub Security and quality, secret-scanning alerts, dependency updates, branch protection and the repository's security policy. Never commit API keys, passwords, tokens, private keys, production connection strings or real personal data.
+
+## Validation scenarios
+
+The automated application test suite covers:
+
+- ACCESS DSR response generation and subject matching verification.
+- Identity-assurance rejection at insufficient assurance.
+- Legal-review approval and unauthorized approval rejection.
+- Processor acknowledgement and pending-acknowledgement/retry outcomes.
+- Duplicate DSR rejection.
+- Consent withdrawal through the actual ConsentPropagationEngine, with persisted audit evidence.
+- Hash-chain audit integrity after subsequent governance and processor events.

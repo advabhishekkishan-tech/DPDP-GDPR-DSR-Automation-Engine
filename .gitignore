@@ -5,3 +5,8 @@ __pycache__/
 venv/
 privacyops.db
 .DS_Store
+
+.env
+.env.*
+*.sqlite
+*.sqlite3
