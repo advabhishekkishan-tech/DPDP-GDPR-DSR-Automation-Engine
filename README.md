@@ -233,3 +233,55 @@ The current implementation uses in-memory state and simulated connectors. A prod
 
 **Abhishek Kishan**  
 Advocate | PrivacyOps & Data Protection
+
+
+## Functional web application
+
+The repository now includes a lightweight web application around the existing PrivacyOps engine.
+
+### Start the application
+
+```bash
+pip install -r requirements.txt
+uvicorn app:app --reload
+```
+
+Open `http://127.0.0.1:8000`.
+
+The web interface currently allows a user to submit a demo DSR and observe:
+
+```
+Request
+  ↓
+Identity assurance
+  ↓
+Jurisdiction / rules
+  ↓
+Multi-system discovery
+  ↓
+Record-level legal decision
+  ↓
+Technical execution
+  ↓
+Verification
+  ↓
+Audit evidence
+```
+
+The application exposes a small API as well:
+
+- `GET /health`
+- `POST /api/dsr/run`
+
+This is intentionally a **functional demo application**, not a production privacy platform. The UI uses the same in-memory engine and mock connectors already used by the CLI workflows, so no real personal data or enterprise systems are accessed.
+
+### Application roadmap
+
+- persistent case database
+- case dashboard and lifecycle states
+- reviewer approval queue connected to the governance engine
+- consent-management screens connected to the consent ledger
+- processor/subprocessor acknowledgement view
+- downloadable evidence package
+- authenticated users and role-based access
+- API documentation and deployment configuration
