@@ -300,3 +300,14 @@ The automated application test suite covers:
 - Duplicate DSR rejection.
 - Consent withdrawal through the actual ConsentPropagationEngine, with persisted audit evidence.
 - Hash-chain audit integrity after subsequent governance and processor events.
+
+
+## Intellectual property and authorship notice
+
+**© 2026 Adv. Abhishek Kishan — All Rights Reserved.**
+
+The PrivacyOps DSR & Consent Automation Engine is an original personal portfolio project by Adv. Abhishek Kishan. The authorship claim covers the original project materials and expression, including but not limited to the user interface, workflow design, architecture, documentation, configuration, original source-code implementation, demonstrations and repository presentation.
+
+The repository is publicly viewable for professional and educational reference. **No licence is granted to copy, redistribute, modify, rebrand, commercially exploit, or create derivative works from the project materials unless expressly authorised in writing by the author.** Third-party libraries and components remain subject to their respective licences.
+
+This notice is an authorship and rights statement; it does not purport to create rights that applicable law does not recognise, and it does not by itself determine the legal scope of protection for abstract ideas or concepts.
