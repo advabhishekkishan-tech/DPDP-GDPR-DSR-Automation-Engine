@@ -24,3 +24,11 @@ Do not include passwords, API keys, access tokens, private keys, personal data o
 Never commit credentials or real personal data. Use environment variables or a managed secret store for future integrations.
 
 The repository ignores common local secret and database artifacts, including environment files and SQLite database files.
+
+## Intellectual property notice
+
+**© 2026 Adv. Abhishek Kishan — All Rights Reserved.**
+
+This repository and its original project materials are authored by Adv. Abhishek Kishan. This includes, but is not limited to, the original user interface, workflow design, architecture, documentation, configuration, source-code implementation and repository presentation. Public visibility of the repository does not constitute a licence to reuse, reproduce, redistribute, modify, rebrand or commercially exploit those materials.
+
+Third-party dependencies remain subject to their own applicable licences. This notice does not claim exclusive copyright over abstract ideas, methods or concepts where applicable law does not protect them.
