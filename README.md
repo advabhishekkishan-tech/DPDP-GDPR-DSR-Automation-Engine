@@ -311,3 +311,21 @@ The PrivacyOps DSR & Consent Automation Engine is an original personal portfolio
 The repository is publicly viewable for professional and educational reference. **No licence is granted to copy, redistribute, modify, rebrand, commercially exploit, or create derivative works from the project materials unless expressly authorised in writing by the author.** Third-party libraries and components remain subject to their respective licences.
 
 This notice is an authorship and rights statement; it does not purport to create rights that applicable law does not recognise, and it does not by itself determine the legal scope of protection for abstract ideas or concepts.
+
+
+## Optional Google sign-in and interaction analytics
+
+The web application can require Google sign-in to distinguish simulator users and maintain an admin-only interaction ledger. The tracker stores the Google account identifier, email/name, timestamps, HTTP method/path and basic account activity. It deliberately does not copy the DSR subject email into the activity ledger.
+
+Set these environment variables in the deployment environment:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `SESSION_SECRET` — use a long random value; never commit it
+- `REQUIRE_LOGIN=true`
+- `ADMIN_EMAIL` — Google account email allowed to view `/api/admin/activity`
+
+Google OAuth must be configured with the deployed callback URL:
+`https://<your-domain>/auth/callback`
+
+For the Render deployment, add the variables under the service's Environment settings and use the exact Render service URL in Google's Authorized redirect URIs. The application remains a portfolio prototype; do not enter real DSR subject data.

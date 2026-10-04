@@ -16,8 +16,8 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 @media(max-width:850px){.grid{grid-template-columns:1fr}nav{overflow:auto}}
 </style></head>
 <body>
-<header><h1>PrivacyOps DSR Lab</h1><p>Legal decision → Technical control → Verification → Evidence</p></header>
-<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button></nav>
+<header><h1>PrivacyOps DSR Lab</h1><p>Legal decision → Technical control → Verification → Evidence</p><div id="account" style="margin-top:14px"></div></header>
+<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button><button id="adminBtn" class="hidden" onclick="show('admin')">Activity</button></nav>
 <main>
 <section id="dashboard" class="view"><div class="card"><h2>Case dashboard</h2><div id="cases"></div></div></section>
 <section id="new" class="view hidden"><div class="grid"><div class="card"><h2>Create DSR case</h2>
@@ -29,6 +29,7 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 <section id="consent" class="view hidden"><div class="card"><h2>Consent operations</h2>
 <label>Subject email</label><input id="cemail" value="user@example.com"><label>Purpose</label><input id="purpose" value="marketing">
 <label>Data categories</label><input id="categories" value="email,phone"><button class="primary" onclick="createConsent()">Register consent</button><div id="consents" style="margin-top:20px"></div></div></section>
+<section id="admin" class="view hidden"><div class="card"><h2>Interaction analytics</h2><p class="muted">Admin-only view of authenticated simulator users and interaction events. DSR subject emails are not copied into this ledger.</p><div id="activity"></div></div></section>
 </main>
 <footer>
 <strong>© 2026 Adv. Abhishek Kishan — All Rights Reserved.</strong><br>
@@ -38,8 +39,11 @@ Original concept, architecture, user interface, workflow design, documentation a
 <script>
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='dashboard')loadCases();if(id==='consent')loadConsents()}
+function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='dashboard')loadCases();if(id==='consent')loadConsents();if(id==='admin')loadActivity()}
 async function api(url,opts={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json();if(!r.ok)throw Error(d.detail||'Request failed');return d}
+async function loadAccount(){try{const d=await api('/api/me');if(d.authenticated){$('account').innerHTML='<span>Signed in as <b>'+esc(d.user.name||d.user.email)+'</b> ('+esc(d.user.email)+')</span> <button class="secondary" onclick="logout()">Sign out</button>'}else{$('account').innerHTML='<a href="/auth/login" style="color:#fff;font-weight:700">Sign in with Google</a>'}}catch(e){$('account').innerHTML='<a href="/auth/login" style="color:#fff;font-weight:700">Sign in with Google</a>'}}
+async function logout(){await api('/auth/logout',{method:'POST'});location.href='/'}
+async function loadActivity(){try{const d=await api('/api/admin/activity');$('activity').innerHTML='<h3>Users</h3><table><tr><th>Email</th><th>Name</th><th>First seen</th><th>Last seen</th></tr>'+d.users.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.created_at)+'</td><td>'+esc(x.last_seen_at)+'</td></tr>').join('')+'</table><h3 style="margin-top:25px">Recent events</h3><table><tr><th>Time</th><th>User</th><th>Method</th><th>Path</th></tr>'+d.events.map(x=>'<tr><td>'+esc(x.created_at)+'</td><td>'+esc(x.user_id)+'</td><td>'+esc(x.method)+'</td><td>'+esc(x.path)+'</td></tr>').join('')+'</table>'}catch(e){alert(e.message)}}
 async function loadCases(){const c=await api('/api/cases');$('cases').innerHTML=c.length?'<table><tr><th>Case</th><th>Type</th><th>Jurisdiction</th><th>Status</th><th></th></tr>'+c.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.request_type)+'</td><td>'+esc(x.jurisdiction)+'</td><td><span class="pill">'+esc(x.status)+'</span></td><td><button class="secondary" onclick="detail(\''+esc(x.id)+'\')">Open</button></td></tr>').join('')+'</table>':'<p class="muted">No cases yet.</p>'}
 async function createCase(){try{const d=await api('/api/cases',{method:'POST',body:JSON.stringify({subject_email:$('email').value,request_type:$('type').value,jurisdiction:$('jurisdiction').value,assurance_level:+$('assurance').value})});renderDetail(d,'newResult');loadCases()}catch(e){alert(e.message)}}
 async function detail(id){try{const d=await api('/api/cases/'+encodeURIComponent(id));renderDetail(d,'newResult');show('new')}catch(e){alert(e.message)}}
@@ -49,5 +53,5 @@ async function processors(id){try{const d=await api('/api/cases/'+encodeURICompo
 async function loadConsents(){const c=await api('/api/consents');$('consents').innerHTML=c.length?'<table><tr><th>ID</th><th>Purpose</th><th>Status</th><th>Propagation</th><th></th></tr>'+c.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.purpose)+'</td><td>'+esc(x.status)+'</td><td>'+esc((x.propagation||[]).map(p=>p.system+': '+p.action).join(', ')||'—')+'</td><td>'+(x.status==='ACTIVE'?'<button class="secondary" onclick="withdraw(\''+esc(x.id)+'\')">Withdraw</button>':'')+'</td></tr>').join('')+'</table>':'<p class="muted">No consent records.</p>'}
 async function createConsent(){try{const d=await api('/api/consents',{method:'POST',body:JSON.stringify({subject_email:$('cemail').value,purpose:$('purpose').value,data_categories:$('categories').value.split(',').map(x=>x.trim()).filter(Boolean)})});alert('Consent registered. Audit integrity: '+d.audit_integrity);loadConsents()}catch(e){alert(e.message)}}
 async function withdraw(id){try{const d=await api('/api/consents/'+encodeURIComponent(id)+'/withdraw',{method:'POST'});alert(JSON.stringify(d,null,2));loadConsents()}catch(e){alert(e.message)}}
-loadCases();
+loadAccount();loadCases();
 </script></body></html>

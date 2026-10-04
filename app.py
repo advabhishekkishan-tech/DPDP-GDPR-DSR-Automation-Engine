@@ -223,7 +223,7 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "application": "PrivacyOps DSR Lab", "version": "1.1.0"}
+    return {"status": "ok", "application": "PrivacyOps DSR Lab", "version": "1.2.0"}
 
 
 @app.get("/api/cases")
