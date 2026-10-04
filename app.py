@@ -44,7 +44,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     same_site="lax",
-    https_only=os.getenv("COOKIE_SECURE", "true").lower() == "true",
+    https_only=os.getenv("COOKIE_SECURE", "false").lower() == "true",
 )
 
 oauth = OAuth()
