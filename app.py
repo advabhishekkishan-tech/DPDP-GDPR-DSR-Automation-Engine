@@ -38,7 +38,7 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
 IS_RENDER = os.getenv("RENDER", "").lower() == "true"
 if IS_RENDER and (not os.getenv("SESSION_SECRET") or SESSION_SECRET == "local-development-only-change-me"):
     raise RuntimeError("SESSION_SECRET must be configured with a strong random value in production.")
-EMAIL_RE = re.compile(r"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 app = FastAPI(
     title="PrivacyOps DSR Lab",
