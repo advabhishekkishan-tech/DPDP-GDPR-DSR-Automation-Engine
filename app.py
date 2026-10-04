@@ -8,7 +8,7 @@ from uuid import uuid4
 import yaml
 from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.sessions import SessionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
