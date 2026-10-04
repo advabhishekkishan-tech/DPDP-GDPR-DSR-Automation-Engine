@@ -209,3 +209,27 @@ def test_audit_tampering_is_detected():
     conn.commit()
     conn.close()
     assert client.get(f"/api/cases/{case_id}/evidence").json()["audit_integrity"] is False
+
+
+
+def test_approved_legal_review_unlocks_escalated_case_for_execution():
+    subject = email()
+    created = client.post("/api/cases", json={"subject_email": subject, "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
+    assert created.status_code == 200
+    case_id = created.json()["id"]
+    assert created.json()["status"] == "ESCALATED"
+
+    denied = client.post(f"/api/cases/{case_id}/approvals", json={"action": "LEGAL_REVIEW", "role": "PRIVACY_ANALYST", "approved": True, "reason": "Not authorised"})
+    assert denied.status_code == 200
+    assert denied.json()["approved"] is False
+
+    approved = client.post(f"/api/cases/{case_id}/approvals", json={"action": "LEGAL_REVIEW", "role": "LEGAL_REVIEWER", "approved": True, "reason": "Retention conflict reviewed"})
+    assert approved.status_code == 200
+    assert approved.json()["approved"] is True
+
+    detail = client.get(f"/api/cases/{case_id}")
+    assert detail.status_code == 200
+    assert detail.json()["status"] == "APPROVED_FOR_EXECUTION"
+    propagated = client.post(f"/api/cases/{case_id}/processors")
+    assert propagated.status_code == 200
+    assert {item["action"] for item in propagated.json()} == {"ERASE"}
