@@ -172,3 +172,40 @@ def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
         item["event"] == "CONSENT_PROPAGATION"
         for item in evidence.json()["events"]
     )
+
+def test_processor_propagation_uses_case_request_action():
+    r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
+    assert r.status_code == 200
+    results = client.post(f"/api/cases/{r.json()['id']}/processors")
+    assert results.status_code == 200
+    assert {item["action"] for item in results.json()} == {"ERASE"}
+
+
+def test_access_case_processor_action_is_export():
+    r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3})
+    assert r.status_code == 200
+    results = client.post(f"/api/cases/{r.json()['id']}/processors")
+    assert results.status_code == 200
+    assert {item["action"] for item in results.json()} == {"EXPORT"}
+
+
+def test_processor_propagation_blocked_for_rejected_case():
+    r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 1})
+    assert r.status_code == 200
+    assert client.post(f"/api/cases/{r.json()['id']}/processors").status_code == 409
+
+
+def test_audit_tampering_is_detected():
+    import json
+    import app as app_module
+    r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
+    assert r.status_code == 200
+    case_id = r.json()["id"]
+    conn = app_module.db()
+    row = conn.execute("SELECT audit_json FROM cases WHERE id=?", (case_id,)).fetchone()
+    events = json.loads(row["audit_json"])
+    events[0]["event"] = "TAMPERED"
+    conn.execute("UPDATE cases SET audit_json=? WHERE id=?", (json.dumps(events), case_id))
+    conn.commit()
+    conn.close()
+    assert client.get(f"/api/cases/{case_id}/evidence").json()["audit_integrity"] is False
