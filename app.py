@@ -427,6 +427,19 @@ def approval(case_id: str, payload: ApprovalSubmission, request: Request):
     approval_request = ApprovalRequest(approval_id, case_id, payload.action, ActorRole.PRIVACY_ANALYST, payload.reason)
     governance.request(approval_request)
     decision = governance.decide(approval_request, payload.role, payload.approved, payload.reason)
+    if payload.action == "LEGAL_REVIEW" and decision.approved:
+        conn = db()
+        conn.execute(
+            "UPDATE cases SET status=? WHERE id=? AND owner_id=? AND status=?",
+            ("APPROVED_FOR_EXECUTION", case_id, owner_id, "ESCALATED"),
+        )
+        conn.commit()
+        conn.close()
+        ledger.append(
+            case_id,
+            "EXECUTION_AUTHORIZED",
+            {"approval_id": decision.approval_id, "action": "LEGAL_REVIEW"},
+        )
     save_audit(case_id, owner_id, ledger)
     return decision.__dict__
 
@@ -534,7 +547,7 @@ def processor_propagation(case_id: str, request: Request):
         action = "ERASE"
     else:
         raise HTTPException(422, "Unsupported DSR processor action.")
-    if status not in {"FULFILLED", "PARTIAL"}:
+    if status not in {"FULFILLED", "PARTIAL", "APPROVED_FOR_EXECUTION"}:
         raise HTTPException(409, f"Processor propagation is not available for case status {status}.")
     results = orchestrator.propagate(case_id, action, max_retries=2)
     save_audit(case_id, owner_id, ledger)
