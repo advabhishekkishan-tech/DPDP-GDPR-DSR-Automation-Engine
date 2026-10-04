@@ -110,6 +110,18 @@ def test_processor_propagation_exposes_ack_and_failure_states():
         },
     )
     case_id = r.json()["id"]
+    if r.json()["status"] == "ESCALATED":
+        approved = client.post(
+            f"/api/cases/{case_id}/approvals",
+            json={
+                "action": "LEGAL_REVIEW",
+                "role": "LEGAL_REVIEWER",
+                "approved": True,
+                "reason": "Test approval for controlled processor propagation",
+            },
+        )
+        assert approved.status_code == 200
+        assert approved.json()["approved"] is True
     propagated = client.post(f"/api/cases/{case_id}/processors")
     assert propagated.status_code == 200
     results = propagated.json()
@@ -176,7 +188,20 @@ def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
 def test_processor_propagation_uses_case_request_action():
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
     assert r.status_code == 200
-    results = client.post(f"/api/cases/{r.json()['id']}/processors")
+    case_id = r.json()["id"]
+    if r.json()["status"] == "ESCALATED":
+        approved = client.post(
+            f"/api/cases/{case_id}/approvals",
+            json={
+                "action": "LEGAL_REVIEW",
+                "role": "LEGAL_REVIEWER",
+                "approved": True,
+                "reason": "Retention conflict reviewed in test",
+            },
+        )
+        assert approved.status_code == 200
+        assert approved.json()["approved"] is True
+    results = client.post(f"/api/cases/{case_id}/processors")
     assert results.status_code == 200
     assert {item["action"] for item in results.json()} == {"ERASE"}
 
