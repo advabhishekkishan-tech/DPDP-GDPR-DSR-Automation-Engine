@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -10,7 +11,7 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.audit import AuditLedger
 from src.consent import ConsentLedger, ConsentPropagationEngine
@@ -34,6 +35,10 @@ DB_PATH = BASE_DIR / "privacyops.db"
 SESSION_SECRET = os.getenv("SESSION_SECRET", "local-development-only-change-me")
 REQUIRE_LOGIN = os.getenv("REQUIRE_LOGIN", "false").lower() == "true"
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
+IS_RENDER = os.getenv("RENDER", "").lower() == "true"
+if IS_RENDER and (not os.getenv("SESSION_SECRET") or SESSION_SECRET == "local-development-only-change-me"):
+    raise RuntimeError("SESSION_SECRET must be configured with a strong random value in production.")
+EMAIL_RE = re.compile(r"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
 app = FastAPI(
     title="PrivacyOps DSR Lab",
@@ -77,9 +82,26 @@ class ConsentSubmission(BaseModel):
     purpose: str = Field(min_length=1, max_length=200)
     data_categories: list[str] = Field(min_length=1, max_length=50)
 
+    @field_validator("subject_email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not EMAIL_RE.fullmatch(value):
+            raise ValueError("Enter a valid demo email address.")
+        return value
+
+    @field_validator("data_categories")
+    @classmethod
+    def validate_categories(cls, value: list[str]) -> list[str]:
+        cleaned = [item.strip() for item in value if item.strip()]
+        if not cleaned or any(len(item) > 100 for item in cleaned):
+            raise ValueError("Data categories must be non-empty and concise.")
+        return cleaned
+
 
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.execute("PRAGMA busy_timeout = 10000")
     conn.row_factory = sqlite3.Row
     conn.execute("""CREATE TABLE IF NOT EXISTS cases (
         id TEXT PRIMARY KEY, subject_email TEXT NOT NULL, request_type TEXT NOT NULL,
@@ -165,6 +187,7 @@ async def security_and_activity(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
 
 
@@ -310,8 +333,15 @@ async def auth_callback(request: Request):
     user_id = f"google:{userinfo['sub']}"
     now = datetime.now(timezone.utc).isoformat()
     user = {"id": user_id, "email": userinfo.get("email", ""), "name": userinfo.get("name", "")}
+    anonymous_id = request.session.get("anon_id")
     request.session["user"] = user
     conn = db()
+    if anonymous_id:
+        conn.execute("UPDATE cases SET owner_id=? WHERE owner_id=?", (user_id, anonymous_id))
+        conn.execute("UPDATE consents SET owner_id=? WHERE owner_id=?", (user_id, anonymous_id))
+        conn.execute("UPDATE activity_events SET user_id=? WHERE user_id=?", (user_id, anonymous_id))
+        conn.execute("DELETE FROM users WHERE id=? AND provider='anonymous'", (anonymous_id,))
+        request.session.pop("anon_id", None)
     conn.execute(
         """INSERT INTO users (id, provider, email, name, created_at, last_seen_at)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -325,7 +355,7 @@ async def auth_callback(request: Request):
 
 @app.post("/auth/logout")
 def auth_logout(request: Request):
-    request.session.pop("user", None)
+    request.session.clear()
     return {"ok": True}
 
 
