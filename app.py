@@ -144,9 +144,12 @@ def require_access(request: Request):
 
 @app.middleware("http")
 async def security_and_activity(request: Request, call_next):
-    owner_id = get_or_create_session_user(request)
+    # SessionMiddleware is downstream of FastAPI's decorator middleware.
+    # Resolve the session user only after downstream middleware has populated
+    # request.scope["session"] so public requests remain session-safe.
     response = await call_next(request)
     if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/admin/"):
+        owner_id = get_or_create_session_user(request)
         conn = db()
         now = datetime.now(timezone.utc).isoformat()
         conn.execute(
