@@ -263,3 +263,56 @@ def test_approved_legal_review_unlocks_escalated_case_for_execution(client):
     propagated = client.post(f"/api/cases/{case_id}/processors")
     assert propagated.status_code == 200
     assert {item["action"] for item in propagated.json()} == {"ERASE"}
+
+
+
+def test_anonymous_users_cannot_access_each_others_cases_or_consents():
+    import app as app_module
+
+    with TestClient(app_module.app) as owner_client:
+        created_case = owner_client.post(
+            "/api/cases",
+            json={"subject_email": email(), "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3},
+        )
+        assert created_case.status_code == 200
+        case_id = created_case.json()["id"]
+
+        created_consent = owner_client.post(
+            "/api/consents",
+            json={"subject_email": email(), "purpose": "marketing", "data_categories": ["email"]},
+        )
+        assert created_consent.status_code == 200
+        consent_id = created_consent.json()["consent_id"]
+
+        with TestClient(app_module.app) as other_client:
+            assert other_client.get(f"/api/cases/{case_id}").status_code == 404
+            assert other_client.get(f"/api/cases/{case_id}/evidence").status_code == 404
+            assert other_client.post(f"/api/consents/{consent_id}/withdraw").status_code == 404
+            assert other_client.get(f"/api/consents/{consent_id}/evidence").status_code == 404
+            assert all(item["id"] != case_id for item in other_client.get("/api/cases").json())
+            assert all(item["id"] != consent_id for item in other_client.get("/api/consents").json())
+
+
+def test_case_record_survives_application_client_restart():
+    import app as app_module
+
+    subject = email()
+    with TestClient(app_module.app) as first_client:
+        created = first_client.post(
+            "/api/cases",
+            json={"subject_email": subject, "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3},
+        )
+        assert created.status_code == 200
+        case_id = created.json()["id"]
+
+    # A new application lifespan represents a restart. The DB record should still exist.
+    with TestClient(app_module.app) as restarted_client:
+        conn = app_module.db()
+        try:
+            persisted = conn.execute("SELECT id FROM cases WHERE id=?", (case_id,)).fetchone()
+        finally:
+            conn.close()
+        assert persisted is not None
+
+        # The new anonymous session must not inherit the previous visitor's case.
+        assert restarted_client.get(f"/api/cases/{case_id}").status_code == 404
