@@ -316,3 +316,27 @@ def test_case_record_survives_application_client_restart():
 
         # The new anonymous session must not inherit the previous visitor's case.
         assert restarted_client.get(f"/api/cases/{case_id}").status_code == 404
+
+def test_consent_record_survives_application_client_restart():
+    import app as app_module
+
+    subject = email()
+    with TestClient(app_module.app) as first_client:
+        created = first_client.post(
+            "/api/consents",
+            json={"subject_email": subject, "purpose": "marketing", "data_categories": ["email"]},
+        )
+        assert created.status_code == 200
+        consent_id = created.json()["consent_id"]
+
+    # Reopening the app should not erase a consent row stored in the database.
+    with TestClient(app_module.app) as restarted_client:
+        conn = app_module.db()
+        try:
+            persisted = conn.execute("SELECT id FROM consents WHERE id=?", (consent_id,)).fetchone()
+        finally:
+            conn.close()
+        assert persisted is not None
+        # The new visitor session must not inherit access to the previous visitor's consent.
+        assert restarted_client.post(f"/api/consents/{consent_id}/withdraw").status_code == 404
+
