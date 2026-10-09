@@ -345,5 +345,5 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
 
 Install dependencies with `pip install -r requirements.txt` to install the PostgreSQL driver as well. Never paste a real connection URL, password, or secret into chat or commit it to Git.
 
-**Migration status:** PostgreSQL connection support is being introduced in the Phase 2 branch. A configured PostgreSQL service, a verified data migration, and passing PostgreSQL integration tests are still required before claiming hosted persistence is complete. Existing SQLite records are not automatically copied into PostgreSQL by this change. Back up and migrate any records deliberately before switching a live deployment.
+**Migration status:** The Phase 2 branch includes PostgreSQL connection support and versioned schema migrations that run at application startup rather than on each request. This is still under test: a configured PostgreSQL service, a verified data migration, passing CI, and persistence checks after restart/redeploy are required before claiming hosted persistence is complete. Existing SQLite records are not automatically copied into PostgreSQL. Back up and migrate any records deliberately before switching a live deployment.
 
