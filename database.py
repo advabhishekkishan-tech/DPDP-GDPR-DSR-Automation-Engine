@@ -96,6 +96,8 @@ def ensure_schema(conn) -> None:
         ]
         for statement in statements:
             conn.execute(statement)
+        ensure_column(conn, "cases", "owner_id", "TEXT")
+        ensure_column(conn, "consents", "owner_id", "TEXT")
         return
 
     conn.execute("""CREATE TABLE IF NOT EXISTS cases (
