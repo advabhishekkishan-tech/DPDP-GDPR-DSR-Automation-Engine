@@ -13,9 +13,9 @@ Move web-app metadata persistence from a container-local SQLite file to a config
 
 ## Implementation sequence
 
-1. Introduce an explicit database configuration layer and separate connection/schema initialization from request handling.
+1. Introduce an explicit database configuration layer and separate connection setup from schema changes.
 2. Add a PostgreSQL backend with parameterized queries and dictionary-like row access; keep SQLite as the local/test backend.
-3. Move schema evolution into versioned migrations. Do not rely on ad-hoc request-time `CREATE TABLE` / `ALTER TABLE` calls in hosted production.
+3. Run versioned migrations at application startup and record completed versions in `schema_migrations`; ordinary request connections no longer create or alter tables.
 4. Add integration tests against both SQLite and PostgreSQL for:
    - case creation, listing, retrieval, and owner isolation;
    - consent creation, withdrawal, repeated withdrawal, and evidence retrieval;
@@ -32,6 +32,10 @@ Move web-app metadata persistence from a container-local SQLite file to a config
 - Keep mock enterprise connectors and synthetic-data warnings.
 - Do not claim the migration is complete until PostgreSQL integration tests pass and persistence has been verified on the deployed service.
 - Preserve session ownership constraints in every case and consent query.
+
+## Implementation checkpoint (branch in progress)
+
+The Phase 2 branch now has `database.py` for backend connections, `migrations.py` with two recorded migrations, application-startup migration execution, and tests that enter FastAPI's lifespan and check migration repeatability. This is not yet a verified PostgreSQL release: CI results and tests against an actual PostgreSQL service still need to be confirmed.
 
 ## Acceptance criteria
 
