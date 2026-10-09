@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +11,9 @@ from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
+
+from database import connect
+from migrations import run_migrations
 
 from src.audit import AuditLedger
 from src.consent import ConsentLedger, ConsentPropagationEngine
@@ -31,7 +33,6 @@ from src.processors import ProcessorNode, ProcessorOrchestrator
 from src.rules import RulesEngine
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "privacyops.db"
 SESSION_SECRET = os.getenv("SESSION_SECRET", "local-development-only-change-me")
 REQUIRE_LOGIN = os.getenv("REQUIRE_LOGIN", "false").lower() == "true"
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
@@ -45,6 +46,12 @@ app = FastAPI(
     version="1.3.0",
     description="Portfolio PrivacyOps case-management application using demo data and mock enterprise connectors.",
 )
+@app.on_event("startup")
+def initialize_database():
+    """Apply pending schema migrations once when the app starts."""
+    run_migrations()
+
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -100,39 +107,8 @@ class ConsentSubmission(BaseModel):
 
 
 def db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.execute("PRAGMA busy_timeout = 10000")
-    conn.row_factory = sqlite3.Row
-    conn.execute("""CREATE TABLE IF NOT EXISTS cases (
-        id TEXT PRIMARY KEY, subject_email TEXT NOT NULL, request_type TEXT NOT NULL,
-        jurisdiction TEXT NOT NULL, assurance_level INTEGER NOT NULL, status TEXT NOT NULL,
-        deadline TEXT, results_json TEXT NOT NULL, response_json TEXT NOT NULL,
-        audit_json TEXT NOT NULL, created_at TEXT NOT NULL, owner_id TEXT
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS consents (
-        id TEXT PRIMARY KEY, subject_email TEXT NOT NULL, purpose TEXT NOT NULL,
-        data_categories TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
-        withdrawn_at TEXT, audit_json TEXT NOT NULL DEFAULT '[]',
-        propagation_json TEXT NOT NULL DEFAULT '[]', owner_id TEXT
-    )""")
-    ensure_column(conn, "cases", "owner_id", "TEXT")
-    ensure_column(conn, "consents", "owner_id", "TEXT")
-    conn.execute("""CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY, provider TEXT NOT NULL, email TEXT, name TEXT,
-        created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS activity_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
-        method TEXT NOT NULL, path TEXT NOT NULL, created_at TEXT NOT NULL
-    )""")
-    conn.commit()
-    return conn
-
-
-def ensure_column(conn, table: str, column: str, definition: str) -> None:
-    columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
-    if column not in columns:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    """Open a connection; schema changes are handled at startup by migrations."""
+    return connect()
 
 
 def get_or_create_session_user(request: Request) -> str:
@@ -171,19 +147,22 @@ async def security_and_activity(request: Request, call_next):
     # request.scope["session"] so public requests remain session-safe.
     response = await call_next(request)
     if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/admin/"):
-        owner_id = get_or_create_session_user(request)
-        conn = db()
-        now = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "UPDATE users SET last_seen_at=? WHERE id=?",
-            (now, owner_id),
-        )
-        conn.execute(
-            "INSERT INTO activity_events (user_id, method, path, created_at) VALUES (?, ?, ?, ?)",
-            (owner_id, request.method, request.url.path, now),
-        )
-        conn.commit()
-        conn.close()
+        # When login is required, do not create anonymous accounts or log
+        # unauthenticated API probes as ordinary user activity.
+        if not REQUIRE_LOGIN or current_user(request):
+            owner_id = get_or_create_session_user(request)
+            conn = db()
+            now = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "UPDATE users SET last_seen_at=? WHERE id=?",
+                (now, owner_id),
+            )
+            conn.execute(
+                "INSERT INTO activity_events (user_id, method, path, created_at) VALUES (?, ?, ?, ?)",
+                (owner_id, request.method, request.url.path, now),
+            )
+            conn.commit()
+            conn.close()
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
@@ -305,11 +284,11 @@ def health():
 @app.get("/api/me")
 def me(request: Request):
     user = current_user(request)
-    owner_id = get_or_create_session_user(request)
+    owner_id = None if REQUIRE_LOGIN and not user else get_or_create_session_user(request)
     return {
         "authenticated": bool(user),
         "user": user,
-        "tracking_id": owner_id if not user else None,
+        "tracking_id": owner_id if not user and not REQUIRE_LOGIN else None,
         "admin": bool(user and ADMIN_EMAIL and user.get("email", "").lower() == ADMIN_EMAIL),
         "login_available": bool(getattr(oauth, "google", None)),
         "login_required": REQUIRE_LOGIN,

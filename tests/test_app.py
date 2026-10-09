@@ -1,23 +1,28 @@
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import app
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    # Enter the lifespan context so startup migrations run before requests.
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def email():
     return f"{uuid4().hex[:10]}@example.com"
 
 
-def test_health():
+def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
 
 
-def test_access_dsr_produces_verified_response_package():
+def test_access_dsr_produces_verified_response_package(client):
     subject = email()
     r = client.post(
         "/api/cases",
@@ -39,7 +44,7 @@ def test_access_dsr_produces_verified_response_package():
     )
 
 
-def test_identity_failure():
+def test_identity_failure(client):
     r = client.post(
         "/api/cases",
         json={
@@ -53,7 +58,7 @@ def test_identity_failure():
     assert r.json()["status"] == "REJECTED_UNVERIFIED"
 
 
-def test_legal_review_approval_and_rejection_are_recorded():
+def test_legal_review_approval_and_rejection_are_recorded(client):
     subject = email()
     r = client.post(
         "/api/cases",
@@ -99,7 +104,7 @@ def test_legal_review_approval_and_rejection_are_recorded():
     assert "APPROVAL_DECISION" in events
 
 
-def test_processor_propagation_exposes_ack_and_failure_states():
+def test_processor_propagation_exposes_ack_and_failure_states(client):
     r = client.post(
         "/api/cases",
         json={
@@ -137,7 +142,7 @@ def test_processor_propagation_exposes_ack_and_failure_states():
     )
 
 
-def test_duplicate_dsr_is_rejected():
+def test_duplicate_dsr_is_rejected(client):
     subject = email()
     payload = {
         "subject_email": subject,
@@ -152,7 +157,7 @@ def test_duplicate_dsr_is_rejected():
     assert "Duplicate DSR detected" in second.json()["detail"]
 
 
-def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
+def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence(client):
     subject = email()
     r = client.post(
         "/api/consents",
@@ -185,7 +190,7 @@ def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
         for item in evidence.json()["events"]
     )
 
-def test_processor_propagation_uses_case_request_action():
+def test_processor_propagation_uses_case_request_action(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
     assert r.status_code == 200
     case_id = r.json()["id"]
@@ -206,7 +211,7 @@ def test_processor_propagation_uses_case_request_action():
     assert {item["action"] for item in results.json()} == {"ERASE"}
 
 
-def test_access_case_processor_action_is_export():
+def test_access_case_processor_action_is_export(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3})
     assert r.status_code == 200
     results = client.post(f"/api/cases/{r.json()['id']}/processors")
@@ -214,13 +219,13 @@ def test_access_case_processor_action_is_export():
     assert {item["action"] for item in results.json()} == {"EXPORT"}
 
 
-def test_processor_propagation_blocked_for_rejected_case():
+def test_processor_propagation_blocked_for_rejected_case(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 1})
     assert r.status_code == 200
     assert client.post(f"/api/cases/{r.json()['id']}/processors").status_code == 409
 
 
-def test_audit_tampering_is_detected():
+def test_audit_tampering_is_detected(client):
     import json
     import app as app_module
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
@@ -237,7 +242,7 @@ def test_audit_tampering_is_detected():
 
 
 
-def test_approved_legal_review_unlocks_escalated_case_for_execution():
+def test_approved_legal_review_unlocks_escalated_case_for_execution(client):
     subject = email()
     created = client.post("/api/cases", json={"subject_email": subject, "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
     assert created.status_code == 200
@@ -258,3 +263,93 @@ def test_approved_legal_review_unlocks_escalated_case_for_execution():
     propagated = client.post(f"/api/cases/{case_id}/processors")
     assert propagated.status_code == 200
     assert {item["action"] for item in propagated.json()} == {"ERASE"}
+
+
+
+def test_anonymous_users_cannot_access_each_others_cases_or_consents():
+    import app as app_module
+
+    with TestClient(app_module.app) as owner_client:
+        created_case = owner_client.post(
+            "/api/cases",
+            json={"subject_email": email(), "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3},
+        )
+        assert created_case.status_code == 200
+        case_id = created_case.json()["id"]
+
+        created_consent = owner_client.post(
+            "/api/consents",
+            json={"subject_email": email(), "purpose": "marketing", "data_categories": ["email"]},
+        )
+        assert created_consent.status_code == 200
+        consent_id = created_consent.json()["consent_id"]
+
+        with TestClient(app_module.app) as other_client:
+            assert other_client.get(f"/api/cases/{case_id}").status_code == 404
+            assert other_client.get(f"/api/cases/{case_id}/evidence").status_code == 404
+            assert other_client.post(f"/api/consents/{consent_id}/withdraw").status_code == 404
+            assert other_client.get(f"/api/consents/{consent_id}/evidence").status_code == 404
+            assert all(item["id"] != case_id for item in other_client.get("/api/cases").json())
+            assert all(item["id"] != consent_id for item in other_client.get("/api/consents").json())
+
+
+def test_case_record_survives_application_client_restart():
+    import app as app_module
+
+    subject = email()
+    with TestClient(app_module.app) as first_client:
+        created = first_client.post(
+            "/api/cases",
+            json={"subject_email": subject, "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3},
+        )
+        assert created.status_code == 200
+        case_id = created.json()["id"]
+
+    # A new application lifespan represents a restart. The DB record should still exist.
+    with TestClient(app_module.app) as restarted_client:
+        conn = app_module.db()
+        try:
+            persisted = conn.execute("SELECT id FROM cases WHERE id=?", (case_id,)).fetchone()
+        finally:
+            conn.close()
+        assert persisted is not None
+
+        # The new anonymous session must not inherit the previous visitor's case.
+        assert restarted_client.get(f"/api/cases/{case_id}").status_code == 404
+
+def test_consent_record_survives_application_client_restart():
+    import app as app_module
+
+    subject = email()
+    with TestClient(app_module.app) as first_client:
+        created = first_client.post(
+            "/api/consents",
+            json={"subject_email": subject, "purpose": "marketing", "data_categories": ["email"]},
+        )
+        assert created.status_code == 200
+        consent_id = created.json()["consent_id"]
+
+    # Reopening the app should not erase a consent row stored in the database.
+    with TestClient(app_module.app) as restarted_client:
+        conn = app_module.db()
+        try:
+            persisted = conn.execute("SELECT id FROM consents WHERE id=?", (consent_id,)).fetchone()
+        finally:
+            conn.close()
+        assert persisted is not None
+        # The new visitor session must not inherit access to the previous visitor's consent.
+        assert restarted_client.post(f"/api/consents/{consent_id}/withdraw").status_code == 404
+
+def test_login_required_blocks_case_and_consent_apis(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "REQUIRE_LOGIN", True)
+    with TestClient(app_module.app) as login_client:
+        me = login_client.get("/api/me")
+        assert me.status_code == 200
+        assert me.json()["login_required"] is True
+        assert me.json()["authenticated"] is False
+        assert me.json()["tracking_id"] is None
+        assert login_client.get("/api/cases").status_code == 401
+        assert login_client.get("/api/consents").status_code == 401
+

@@ -329,3 +329,21 @@ Google OAuth must be configured with the deployed callback URL:
 `https://<your-domain>/auth/callback`
 
 For the Render deployment, add the variables under the service's Environment settings and use the exact Render service URL in Google's Authorized redirect URIs. The application remains a portfolio prototype; do not enter real DSR subject data.
+
+## Database configuration (Phase 2)
+
+The web app supports two database backends:
+
+- **Local development:** SQLite is used when `DATABASE_URL` is unset. The local file is `privacyops.db`.
+- **Hosted beta:** set `DATABASE_URL` to a PostgreSQL connection URL supplied by your database host. The application then uses PostgreSQL instead of silently falling back to SQLite.
+
+Example environment variable name (do not commit credentials):
+
+```text
+DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
+```
+
+Install dependencies with `pip install -r requirements.txt` to install the PostgreSQL driver as well. Never paste a real connection URL, password, or secret into chat or commit it to Git.
+
+**Migration status:** The Phase 2 branch includes PostgreSQL connection support and versioned schema migrations that run at application startup rather than on each request. The latest SQLite and PostgreSQL CI test jobs passed, as did CodeQL and dependency audit. Hosted persistence is **not yet verified**: the Render service has not been switched to a managed PostgreSQL database, and an actual restart/redeploy check remains. Existing SQLite records are not automatically copied into PostgreSQL. Back up and migrate any records deliberately before switching a live deployment.
+
