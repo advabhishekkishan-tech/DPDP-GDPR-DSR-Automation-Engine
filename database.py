@@ -11,6 +11,7 @@ from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+IS_RENDER = os.getenv("RENDER", "").lower() == "true"
 IS_POSTGRES = DATABASE_URL.startswith(("postgres://", "postgresql://"))
 
 
@@ -47,6 +48,8 @@ class PostgresConnection:
 def connect():
     """Return a connection for the configured backend."""
     if not DATABASE_URL:
+        if IS_RENDER:
+            raise RuntimeError("DATABASE_URL must point to a managed PostgreSQL database on Render; SQLite is reserved for local development.")
         return _sqlite_connect()
     if not IS_POSTGRES:
         raise RuntimeError(
