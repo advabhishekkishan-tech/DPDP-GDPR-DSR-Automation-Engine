@@ -147,19 +147,22 @@ async def security_and_activity(request: Request, call_next):
     # request.scope["session"] so public requests remain session-safe.
     response = await call_next(request)
     if request.url.path.startswith("/api/") and not request.url.path.startswith("/api/admin/"):
-        owner_id = get_or_create_session_user(request)
-        conn = db()
-        now = datetime.now(timezone.utc).isoformat()
-        conn.execute(
-            "UPDATE users SET last_seen_at=? WHERE id=?",
-            (now, owner_id),
-        )
-        conn.execute(
-            "INSERT INTO activity_events (user_id, method, path, created_at) VALUES (?, ?, ?, ?)",
-            (owner_id, request.method, request.url.path, now),
-        )
-        conn.commit()
-        conn.close()
+        # When login is required, do not create anonymous accounts or log
+        # unauthenticated API probes as ordinary user activity.
+        if not REQUIRE_LOGIN or current_user(request):
+            owner_id = get_or_create_session_user(request)
+            conn = db()
+            now = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "UPDATE users SET last_seen_at=? WHERE id=?",
+                (now, owner_id),
+            )
+            conn.execute(
+                "INSERT INTO activity_events (user_id, method, path, created_at) VALUES (?, ?, ?, ?)",
+                (owner_id, request.method, request.url.path, now),
+            )
+            conn.commit()
+            conn.close()
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
@@ -281,11 +284,11 @@ def health():
 @app.get("/api/me")
 def me(request: Request):
     user = current_user(request)
-    owner_id = get_or_create_session_user(request)
+    owner_id = None if REQUIRE_LOGIN and not user else get_or_create_session_user(request)
     return {
         "authenticated": bool(user),
         "user": user,
-        "tracking_id": owner_id if not user else None,
+        "tracking_id": owner_id if not user and not REQUIRE_LOGIN else None,
         "admin": bool(user and ADMIN_EMAIL and user.get("email", "").lower() == ADMIN_EMAIL),
         "login_available": bool(getattr(oauth, "google", None)),
         "login_required": REQUIRE_LOGIN,
