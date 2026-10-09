@@ -1,23 +1,28 @@
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import app
 
-client = TestClient(app)
+@pytest.fixture(scope="module")
+def client():
+    # Enter the lifespan context so startup migrations run before requests.
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def email():
     return f"{uuid4().hex[:10]}@example.com"
 
 
-def test_health():
+def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
 
 
-def test_access_dsr_produces_verified_response_package():
+def test_access_dsr_produces_verified_response_package(client):
     subject = email()
     r = client.post(
         "/api/cases",
@@ -39,7 +44,7 @@ def test_access_dsr_produces_verified_response_package():
     )
 
 
-def test_identity_failure():
+def test_identity_failure(client):
     r = client.post(
         "/api/cases",
         json={
@@ -53,7 +58,7 @@ def test_identity_failure():
     assert r.json()["status"] == "REJECTED_UNVERIFIED"
 
 
-def test_legal_review_approval_and_rejection_are_recorded():
+def test_legal_review_approval_and_rejection_are_recorded(client):
     subject = email()
     r = client.post(
         "/api/cases",
@@ -99,7 +104,7 @@ def test_legal_review_approval_and_rejection_are_recorded():
     assert "APPROVAL_DECISION" in events
 
 
-def test_processor_propagation_exposes_ack_and_failure_states():
+def test_processor_propagation_exposes_ack_and_failure_states(client):
     r = client.post(
         "/api/cases",
         json={
@@ -137,7 +142,7 @@ def test_processor_propagation_exposes_ack_and_failure_states():
     )
 
 
-def test_duplicate_dsr_is_rejected():
+def test_duplicate_dsr_is_rejected(client):
     subject = email()
     payload = {
         "subject_email": subject,
@@ -152,7 +157,7 @@ def test_duplicate_dsr_is_rejected():
     assert "Duplicate DSR detected" in second.json()["detail"]
 
 
-def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
+def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence(client):
     subject = email()
     r = client.post(
         "/api/consents",
@@ -185,7 +190,7 @@ def test_consent_withdrawal_uses_propagation_engine_and_persists_evidence():
         for item in evidence.json()["events"]
     )
 
-def test_processor_propagation_uses_case_request_action():
+def test_processor_propagation_uses_case_request_action(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
     assert r.status_code == 200
     case_id = r.json()["id"]
@@ -206,7 +211,7 @@ def test_processor_propagation_uses_case_request_action():
     assert {item["action"] for item in results.json()} == {"ERASE"}
 
 
-def test_access_case_processor_action_is_export():
+def test_access_case_processor_action_is_export(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ACCESS", "jurisdiction": "GDPR", "assurance_level": 3})
     assert r.status_code == 200
     results = client.post(f"/api/cases/{r.json()['id']}/processors")
@@ -214,13 +219,13 @@ def test_access_case_processor_action_is_export():
     assert {item["action"] for item in results.json()} == {"EXPORT"}
 
 
-def test_processor_propagation_blocked_for_rejected_case():
+def test_processor_propagation_blocked_for_rejected_case(client):
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 1})
     assert r.status_code == 200
     assert client.post(f"/api/cases/{r.json()['id']}/processors").status_code == 409
 
 
-def test_audit_tampering_is_detected():
+def test_audit_tampering_is_detected(client):
     import json
     import app as app_module
     r = client.post("/api/cases", json={"subject_email": email(), "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
@@ -237,7 +242,7 @@ def test_audit_tampering_is_detected():
 
 
 
-def test_approved_legal_review_unlocks_escalated_case_for_execution():
+def test_approved_legal_review_unlocks_escalated_case_for_execution(client):
     subject = email()
     created = client.post("/api/cases", json={"subject_email": subject, "request_type": "ERASURE", "jurisdiction": "GDPR", "assurance_level": 3})
     assert created.status_code == 200
