@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app import app
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def client():
     # Enter the lifespan context so startup migrations run before requests.
     with TestClient(app) as test_client:
