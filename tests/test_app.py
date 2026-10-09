@@ -340,3 +340,16 @@ def test_consent_record_survives_application_client_restart():
         # The new visitor session must not inherit access to the previous visitor's consent.
         assert restarted_client.post(f"/api/consents/{consent_id}/withdraw").status_code == 404
 
+def test_login_required_blocks_case_and_consent_apis(monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "REQUIRE_LOGIN", True)
+    with TestClient(app_module.app) as login_client:
+        me = login_client.get("/api/me")
+        assert me.status_code == 200
+        assert me.json()["login_required"] is True
+        assert me.json()["authenticated"] is False
+        assert me.json()["tracking_id"] is None
+        assert login_client.get("/api/cases").status_code == 401
+        assert login_client.get("/api/consents").status_code == 401
+
