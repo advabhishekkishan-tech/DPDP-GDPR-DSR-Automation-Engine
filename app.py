@@ -12,7 +12,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 
-from database import connect, ensure_schema
+from database import connect
+from migrations import run_migrations
 
 from src.audit import AuditLedger
 from src.consent import ConsentLedger, ConsentPropagationEngine
@@ -45,6 +46,12 @@ app = FastAPI(
     version="1.3.0",
     description="Portfolio PrivacyOps case-management application using demo data and mock enterprise connectors.",
 )
+@app.on_event("startup")
+def initialize_database():
+    """Apply pending schema migrations once when the app starts."""
+    run_migrations()
+
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -100,11 +107,8 @@ class ConsentSubmission(BaseModel):
 
 
 def db():
-    """Open the configured database and ensure the current schema exists."""
-    conn = connect()
-    ensure_schema(conn)
-    conn.commit()
-    return conn
+    """Open a connection; schema changes are handled at startup by migrations."""
+    return connect()
 
 
 def get_or_create_session_user(request: Request) -> str:
