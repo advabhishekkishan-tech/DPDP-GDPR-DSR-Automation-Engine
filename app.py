@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +11,8 @@ from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field, field_validator
+
+from database import connect, ensure_schema
 
 from src.audit import AuditLedger
 from src.consent import ConsentLedger, ConsentPropagationEngine
@@ -31,7 +32,6 @@ from src.processors import ProcessorNode, ProcessorOrchestrator
 from src.rules import RulesEngine
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "privacyops.db"
 SESSION_SECRET = os.getenv("SESSION_SECRET", "local-development-only-change-me")
 REQUIRE_LOGIN = os.getenv("REQUIRE_LOGIN", "false").lower() == "true"
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
@@ -100,39 +100,11 @@ class ConsentSubmission(BaseModel):
 
 
 def db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.execute("PRAGMA busy_timeout = 10000")
-    conn.row_factory = sqlite3.Row
-    conn.execute("""CREATE TABLE IF NOT EXISTS cases (
-        id TEXT PRIMARY KEY, subject_email TEXT NOT NULL, request_type TEXT NOT NULL,
-        jurisdiction TEXT NOT NULL, assurance_level INTEGER NOT NULL, status TEXT NOT NULL,
-        deadline TEXT, results_json TEXT NOT NULL, response_json TEXT NOT NULL,
-        audit_json TEXT NOT NULL, created_at TEXT NOT NULL, owner_id TEXT
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS consents (
-        id TEXT PRIMARY KEY, subject_email TEXT NOT NULL, purpose TEXT NOT NULL,
-        data_categories TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
-        withdrawn_at TEXT, audit_json TEXT NOT NULL DEFAULT '[]',
-        propagation_json TEXT NOT NULL DEFAULT '[]', owner_id TEXT
-    )""")
-    ensure_column(conn, "cases", "owner_id", "TEXT")
-    ensure_column(conn, "consents", "owner_id", "TEXT")
-    conn.execute("""CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY, provider TEXT NOT NULL, email TEXT, name TEXT,
-        created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL
-    )""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS activity_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
-        method TEXT NOT NULL, path TEXT NOT NULL, created_at TEXT NOT NULL
-    )""")
+    """Open the configured database and ensure the current schema exists."""
+    conn = connect()
+    ensure_schema(conn)
     conn.commit()
     return conn
-
-
-def ensure_column(conn, table: str, column: str, definition: str) -> None:
-    columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
-    if column not in columns:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def get_or_create_session_user(request: Request) -> str:
