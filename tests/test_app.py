@@ -353,3 +353,61 @@ def test_login_required_blocks_case_and_consent_apis(monkeypatch):
         assert login_client.get("/api/cases").status_code == 401
         assert login_client.get("/api/consents").status_code == 401
 
+
+
+def test_legal_decision_record_requires_identity_for_fulfilment(client):
+    response = client.post("/api/legal-decisions", json={
+        "framework": "GDPR", "request_type": "ERASURE",
+        "processing_purpose": "Customer account administration",
+        "identity_verified": False, "legal_hold_present": False,
+        "proposed_outcome": "FULFIL",
+        "reasoning": "Identity has not been sufficiently verified.",
+    })
+    assert response.status_code == 422
+
+
+def test_legal_decision_record_blocks_unexplained_legal_hold(client):
+    response = client.post("/api/legal-decisions", json={
+        "framework": "BOTH", "request_type": "ERASURE",
+        "processing_purpose": "Account closure", "identity_verified": True,
+        "legal_hold_present": True, "exception_or_retention_basis": "",
+        "proposed_outcome": "FULFIL",
+        "reasoning": "The proposed action requires review against a potential hold.",
+    })
+    assert response.status_code == 422
+
+
+def test_legal_decision_record_persists_with_human_review_flag(client):
+    response = client.post("/api/legal-decisions", json={
+        "framework": "DPDP", "request_type": "ACCESS",
+        "processing_purpose": "Responding to a data principal request",
+        "identity_verified": True, "proposed_outcome": "ESCALATE",
+        "reasoning": "The applicable scope and available records require a reviewer to confirm.",
+        "legal_references": "Confirm relevant Act provisions and commencement status.",
+    })
+    assert response.status_code == 200
+    assert response.json()["review_status"] == "DRAFT_FOR_HUMAN_REVIEW"
+    records = client.get("/api/legal-decisions")
+    assert records.status_code == 200
+    assert any(item["id"] == response.json()["id"] for item in records.json())
+
+
+def test_vendor_risk_assessment_returns_transparent_risk_and_actions(client):
+    response = client.post("/api/vendor-assessments", json={
+        "vendor_name": "Demo CRM Vendor", "framework": "BOTH",
+        "service_description": "Hosts customer relationship management records",
+        "data_sensitivity": 5, "data_volume": 5, "access_privilege": 4,
+        "cross_border": True, "subprocessors": True, "incident_history": 4,
+        "security_maturity": 1, "contract_controls": 1,
+        "retention_controls": 2, "rights_support": 1,
+        "safeguards": ["Encryption evidence"], "reviewer_notes": "Evidence still required",
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert 0 <= body["residual_score"] <= body["inherent_score"] <= 100
+    assert body["residual_band"] in {"LOW", "MODERATE", "HIGH", "CRITICAL"}
+    assert body["review_status"] == "HUMAN_REVIEW_REQUIRED"
+    assert any("contract" in item.lower() for item in body["recommended_actions"])
+    saved = client.get("/api/vendor-assessments")
+    assert saved.status_code == 200
+    assert any(item["id"] == body["id"] for item in saved.json())

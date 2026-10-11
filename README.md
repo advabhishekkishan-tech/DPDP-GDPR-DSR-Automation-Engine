@@ -229,6 +229,18 @@ The current implementation uses local SQLite for the web application's case/cons
 - API layer and web dashboard
 - consent receipts and secure consent history export
 
+
+## Legal decision records and vendor privacy risk screening
+
+The application includes a practitioner-facing **Legal & Vendor Risk** workspace with two separate records:
+
+- **Legal decision record:** captures the selected framework (DPDP, GDPR or both), request type, processing purpose, legal basis/authority considered, identity-verification status, possible legal hold, proposed outcome, reasoning, evidence gaps, references and reviewer. It blocks a proposed full/partial fulfilment where identity is unresolved, and requires a recorded rationale when a legal hold is flagged. Records remain marked for human review.
+- **Vendor privacy risk screening:** records data sensitivity and volume, access privilege, prior incidents, cross-border processing, subprocessors, security maturity, contract controls, retention/deletion controls, and rights-request support. It produces transparent inherent and residual screening bands plus suggested due-diligence actions.
+
+The vendor score is an **illustrative screening index**, not a statutory formula, certification, automatic onboarding decision or substitute for evidence review. A safeguard receives limited score credit only when recorded; users should validate all questionnaire responses against documents and set a review cadence. DPDP and GDPR are selectable separately because their legal tests and duties are not interchangeable. “Both” means assess both pathways, not assume the same result under each.
+
+For legal reference points, consult the official [Digital Personal Data Protection Rules, 2025](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025) and GDPR Article 35 on DPIAs. This module is a general vendor-risk screen; it does not claim that every vendor assessment is a statutory DPIA. Under GDPR, a DPIA is required where the proposed processing is likely to result in a high risk to individuals' rights and freedoms, subject to Article 35 and applicable supervisory guidance.
+
 ## Author
 
 **Abhishek Kishan**  

@@ -84,6 +84,40 @@ class ApprovalSubmission(BaseModel):
     reason: str = Field(default="", max_length=1000)
 
 
+
+class LegalDecisionSubmission(BaseModel):
+    framework: str = Field(pattern="^(DPDP|GDPR|BOTH)$")
+    request_type: str = Field(min_length=2, max_length=40)
+    processing_purpose: str = Field(min_length=3, max_length=500)
+    legal_basis_or_authority: str = Field(default="", max_length=500)
+    identity_verified: bool = False
+    legal_hold_present: bool = False
+    exception_or_retention_basis: str = Field(default="", max_length=1000)
+    proposed_outcome: str = Field(pattern="^(FULFIL|PARTIAL|RESTRICT|REFUSE|ESCALATE)$")
+    reasoning: str = Field(min_length=10, max_length=3000)
+    evidence: str = Field(default="", max_length=2000)
+    reviewer: str = Field(default="", max_length=200)
+    legal_references: str = Field(default="", max_length=1000)
+
+
+class VendorRiskSubmission(BaseModel):
+    vendor_name: str = Field(min_length=2, max_length=200)
+    framework: str = Field(pattern="^(DPDP|GDPR|BOTH)$")
+    service_description: str = Field(min_length=5, max_length=1000)
+    data_sensitivity: int = Field(ge=1, le=5)
+    data_volume: int = Field(ge=1, le=5)
+    access_privilege: int = Field(ge=1, le=5)
+    cross_border: bool = False
+    subprocessors: bool = False
+    incident_history: int = Field(ge=1, le=5)
+    security_maturity: int = Field(ge=1, le=5)
+    contract_controls: int = Field(ge=1, le=5)
+    retention_controls: int = Field(ge=1, le=5)
+    rights_support: int = Field(ge=1, le=5)
+    safeguards: list[str] = Field(default_factory=list, max_length=20)
+    reviewer_notes: str = Field(default="", max_length=2000)
+
+
 class ConsentSubmission(BaseModel):
     subject_email: str = Field(min_length=3, max_length=320)
     purpose: str = Field(min_length=1, max_length=200)
@@ -352,6 +386,96 @@ def admin_activity(request: Request):
     ).fetchall()
     conn.close()
     return {"users": [dict(x) for x in users], "events": [dict(x) for x in events]}
+
+
+
+@app.post("/api/legal-decisions")
+def create_legal_decision(payload: LegalDecisionSubmission, request: Request):
+    owner_id = require_access(request)
+    if not payload.identity_verified and payload.proposed_outcome in {"FULFIL", "PARTIAL"}:
+        raise HTTPException(422, "Identity is not verified. Escalate or resolve verification before recording fulfilment.")
+    if payload.legal_hold_present and payload.proposed_outcome == "FULFIL" and not payload.exception_or_retention_basis.strip():
+        raise HTTPException(422, "A legal hold is flagged. Record its scope and rationale before proposing full fulfilment.")
+    decision_id = "LD-" + uuid4().hex[:10].upper()
+    now = datetime.now(timezone.utc).isoformat()
+    record = payload.model_dump()
+    record.update({"id": decision_id, "created_at": now, "owner_id": owner_id,
+                   "review_status": "DRAFT_FOR_HUMAN_REVIEW",
+                   "notice": "Decision aid only. Confirm law applicability, provisions and outcome through human review."})
+    conn = db()
+    conn.execute("INSERT INTO legal_decisions (id, owner_id, framework, request_type, record_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                 (decision_id, owner_id, payload.framework, payload.request_type, json.dumps(record), now))
+    conn.commit()
+    conn.close()
+    return record
+
+
+@app.get("/api/legal-decisions")
+def list_legal_decisions(request: Request):
+    owner_id = require_access(request)
+    conn = db()
+    rows = conn.execute("SELECT record_json FROM legal_decisions WHERE owner_id=? ORDER BY created_at DESC LIMIT 100", (owner_id,)).fetchall()
+    conn.close()
+    return [json.loads(row["record_json"]) for row in rows]
+
+
+def calculate_vendor_risk(payload: VendorRiskSubmission):
+    drivers = {
+        "Data sensitivity": payload.data_sensitivity,
+        "Data volume": payload.data_volume,
+        "Privileged access": payload.access_privilege,
+        "Incident history": payload.incident_history,
+        "Cross-border transfer": 4 if payload.cross_border else 1,
+        "Subprocessor chain": 4 if payload.subprocessors else 1,
+    }
+    control_gaps = {
+        "Security maturity gap": 6 - payload.security_maturity,
+        "Contract control gap": 6 - payload.contract_controls,
+        "Retention/deletion control gap": 6 - payload.retention_controls,
+        "Rights-request support gap": 6 - payload.rights_support,
+    }
+    score = round((sum(drivers.values()) + sum(control_gaps.values())) / 50 * 100)
+    residual = max(0, score - min(20, len(payload.safeguards) * 3))
+    def band(value):
+        return "LOW" if value < 30 else "MODERATE" if value < 55 else "HIGH" if value < 75 else "CRITICAL"
+    actions = []
+    if payload.security_maturity <= 2: actions.append("Request and validate security assurance evidence, access controls and incident response.")
+    if payload.contract_controls <= 2: actions.append("Resolve contract gaps on instructions, confidentiality, security, incidents, subprocessors and audit cooperation.")
+    if payload.retention_controls <= 2: actions.append("Define retention, return/deletion and deletion-verification requirements.")
+    if payload.rights_support <= 2: actions.append("Test support for rights requests and framework-specific response deadlines.")
+    if payload.cross_border: actions.append("Assess destination, transfer mechanism and applicable transfer restrictions.")
+    if payload.subprocessors: actions.append("Obtain the subprocessor list, change-notice process and flow-down obligations.")
+    if payload.incident_history >= 4: actions.append("Review prior incidents, root cause and remediation evidence before onboarding.")
+    if not actions: actions.append("Validate responses against documentary evidence and set a periodic review date.")
+    return {"inherent_score": score, "inherent_band": band(score), "residual_score": residual, "residual_band": band(residual),
+            "drivers": drivers, "control_gaps": control_gaps, "safeguards_recorded": payload.safeguards,
+            "recommended_actions": actions, "review_status": "HUMAN_REVIEW_REQUIRED",
+            "methodology": "Illustrative 0–100 screening index, not a statutory score, certification or automatic onboarding decision."}
+
+
+@app.post("/api/vendor-assessments")
+def create_vendor_assessment(payload: VendorRiskSubmission, request: Request):
+    owner_id = require_access(request)
+    assessment_id = "VR-" + uuid4().hex[:10].upper()
+    now = datetime.now(timezone.utc).isoformat()
+    record = payload.model_dump()
+    record.update(calculate_vendor_risk(payload))
+    record.update({"id": assessment_id, "created_at": now, "owner_id": owner_id})
+    conn = db()
+    conn.execute("INSERT INTO vendor_assessments (id, owner_id, vendor_name, framework, score_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                 (assessment_id, owner_id, payload.vendor_name, payload.framework, json.dumps(record), now))
+    conn.commit()
+    conn.close()
+    return record
+
+
+@app.get("/api/vendor-assessments")
+def list_vendor_assessments(request: Request):
+    owner_id = require_access(request)
+    conn = db()
+    rows = conn.execute("SELECT score_json FROM vendor_assessments WHERE owner_id=? ORDER BY created_at DESC LIMIT 100", (owner_id,)).fetchall()
+    conn.close()
+    return [json.loads(row["score_json"]) for row in rows]
 
 
 @app.get("/api/cases")

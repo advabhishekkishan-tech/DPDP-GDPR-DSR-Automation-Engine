@@ -18,7 +18,7 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 </style></head>
 <body>
 <header><h1>PrivacyOps DSR Lab</h1><p>Legal decision → Technical control → Verification → Evidence</p><div id="account" style="margin-top:14px"></div></header>
-<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button><button id="adminBtn" class="hidden" onclick="show('admin')">Activity</button></nav>
+<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button><button onclick="show('legalrisk')">Legal & Vendor Risk</button><button id="adminBtn" class="hidden" onclick="show('admin')">Activity</button></nav>
 <main>
 <div class="notice"><strong>Public proof-of-concept.</strong> Use synthetic data only. Do not enter real customer, employee, financial, health, identity or other sensitive information. <a href="/privacy" target="_blank">Read the privacy notice</a>.</div>
 <section id="dashboard" class="view"><div class="card"><h2>Case dashboard</h2><div id="cases"></div></div></section>
@@ -31,6 +31,42 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 <section id="consent" class="view hidden"><div class="card"><h2>Consent operations</h2>
 <label>Demo subject email</label><input id="cemail" value="user@example.com"><label>Purpose</label><input id="purpose" value="marketing">
 <label>Data categories</label><input id="categories" value="email,phone"><button class="primary" onclick="createConsent()">Register consent</button><div id="consents" style="margin-top:20px"></div></div></section>
+
+<section id="legalrisk" class="view hidden">
+<div class="grid">
+<div class="card"><h2>Legal decision record</h2><p class="muted">Record the facts, legal analysis and evidence supporting a proposed DSR outcome. Human review is mandatory.</p>
+<label>Framework</label><select id="ldFramework"><option>DPDP</option><option>GDPR</option><option>BOTH</option></select>
+<label>Request type</label><select id="ldType"><option>ERASURE</option><option>ACCESS</option><option>RECTIFICATION</option><option>RESTRICTION</option><option>PORTABILITY</option><option>OBJECTION</option><option>WITHDRAWAL</option><option>OTHER</option></select>
+<label>Processing purpose / context</label><input id="ldPurpose" placeholder="Why is the data processed?">
+<label>Legal basis / authority considered</label><input id="ldBasis" placeholder="Relevant provision or legal basis">
+<label>Identity verified?</label><select id="ldIdentity"><option value="true">Yes</option><option value="false">No / unresolved</option></select>
+<label>Legal hold or retention issue?</label><select id="ldHold"><option value="false">No / not identified</option><option value="true">Yes</option></select>
+<label>Exception / retention rationale and scope</label><input id="ldException" placeholder="Affected records and reason">
+<label>Proposed outcome</label><select id="ldOutcome"><option>ESCALATE</option><option>FULFIL</option><option>PARTIAL</option><option>RESTRICT</option><option>REFUSE</option></select>
+<label>Reasoned analysis</label><input id="ldReason" placeholder="Facts, legal test and application">
+<label>Evidence / unresolved questions</label><input id="ldEvidence" placeholder="Evidence reviewed and gaps">
+<label>Legal references</label><input id="ldRefs" placeholder="Exact provisions / guidance">
+<label>Reviewer role / identifier</label><input id="ldReviewer" placeholder="Human reviewer">
+<button class="primary" onclick="saveLegalDecision()">Save legal decision</button></div>
+<div class="card"><h2>Vendor privacy risk assessment</h2><p class="muted">Rate factors 1–5. For security, contract, retention and rights-support controls, 1 = weak and 5 = strong.</p>
+<label>Vendor name (demo)</label><input id="vrName" placeholder="Demo vendor">
+<label>Framework</label><select id="vrFramework"><option>DPDP</option><option>GDPR</option><option>BOTH</option></select>
+<label>Service / processing description</label><input id="vrService" placeholder="What service does it provide?">
+<label>Data sensitivity (1 low – 5 very sensitive)</label><select id="vrSensitivity"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+<label>Data volume (1 small – 5 very large)</label><select id="vrVolume"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+<label>Access privilege (1 limited – 5 privileged)</label><select id="vrAccess"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+<label>Prior incidents (1 low concern – 5 serious/repeated)</label><select id="vrIncidents"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+<label>Security maturity (1 weak – 5 strong)</label><select id="vrSecurity"><option>3</option><option>1</option><option>2</option><option>4</option><option>5</option></select>
+<label>Contract controls (1 weak – 5 strong)</label><select id="vrContract"><option>3</option><option>1</option><option>2</option><option>4</option><option>5</option></select>
+<label>Retention/deletion controls (1 weak – 5 strong)</label><select id="vrRetention"><option>3</option><option>1</option><option>2</option><option>4</option><option>5</option></select>
+<label>Rights-request support (1 weak – 5 strong)</label><select id="vrRights"><option>3</option><option>1</option><option>2</option><option>4</option><option>5</option></select>
+<label>Cross-border transfer?</label><select id="vrCross"><option value="false">No / unknown</option><option value="true">Yes</option></select>
+<label>Subprocessors involved?</label><select id="vrSubs"><option value="false">No / unknown</option><option value="true">Yes</option></select>
+<label>Safeguards evidenced (comma-separated)</label><input id="vrSafeguards" placeholder="Audit report, encryption evidence, pen-test summary">
+<label>Reviewer notes</label><input id="vrNotes" placeholder="Evidence gaps, conditions, review date">
+<button class="primary" onclick="saveVendorRisk()">Calculate vendor risk</button></div>
+</div><div class="card"><h2>Saved assessments</h2><div id="legalRiskResults" class="muted">Open this tab to load saved records.</div></div>
+</section>
 <section id="admin" class="view hidden"><div class="card"><h2>Interaction analytics</h2><p class="muted">Admin-only view. The activity ledger records account/session identifiers, timestamps, HTTP method and API path. DSR subject email is not copied into the activity ledger.</p><div id="activity"></div></div></section>
 </main>
 <footer class="small" style="max-width:1200px;margin:30px auto;padding:0 18px 30px;color:#64748b">
@@ -39,7 +75,7 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 <script>
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='dashboard')loadCases();if(id==='consent')loadConsents();if(id==='admin')loadActivity()}
+function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.add('hidden'));$(id).classList.remove('hidden');if(id==='dashboard')loadCases();if(id==='consent')loadConsents();if(id==='admin')loadActivity();if(id==='legalrisk')loadLegalRisk()}
 async function api(url,opts={}){const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json();if(!r.ok)throw Error(d.detail||'Request failed');return d}
 async function loadAccount(){try{const d=await api('/api/me');let html='';if(d.authenticated){html='<span>Signed in as <b>'+esc(d.user.name||d.user.email)+'</b></span> <button class="secondary" onclick="logout()">Sign out</button>'}else if(d.login_available){html='<a href="/auth/login" style="color:#fff;font-weight:700">Sign in with Google</a>'}else{html='<span class="small">Anonymous session · no sign-in configured</span>'}$('account').innerHTML=html;if(d.admin)$('adminBtn').classList.remove('hidden');return d}catch(e){$('account').innerHTML='<span class="small">Unable to check sign-in status</span>';return null}}
 async function logout(){await api('/auth/logout',{method:'POST'});location.href='/'}
@@ -53,5 +89,10 @@ async function processors(id){try{const d=await api('/api/cases/'+encodeURICompo
 async function loadConsents(){const c=await api('/api/consents');$('consents').innerHTML=c.length?'<table><tr><th>ID</th><th>Purpose</th><th>Status</th><th>Propagation</th><th></th></tr>'+c.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.purpose)+'</td><td>'+esc(x.status)+'</td><td>'+esc((x.propagation||[]).map(p=>p.system+': '+p.action).join(', ')||'—')+'</td><td>'+(x.status==='ACTIVE'?'<button class="secondary" onclick="withdraw(\''+esc(x.id)+'\')">Withdraw</button>':'')+'</td></tr>').join('')+'</table>':'<p class="muted">No consent records in this session.</p>'}
 async function createConsent(){try{const d=await api('/api/consents',{method:'POST',body:JSON.stringify({subject_email:$('cemail').value,purpose:$('purpose').value,data_categories:$('categories').value.split(',').map(x=>x.trim()).filter(Boolean)})});alert('Consent registered. Audit integrity: '+d.audit_integrity);loadConsents()}catch(e){alert(e.message)}}
 async function withdraw(id){try{const d=await api('/api/consents/'+encodeURIComponent(id)+'/withdraw',{method:'POST'});alert(JSON.stringify(d,null,2));loadConsents()}catch(e){alert(e.message)}}
+
+async function saveLegalDecision(){try{const d=await api('/api/legal-decisions',{method:'POST',body:JSON.stringify({framework:$('ldFramework').value,request_type:$('ldType').value,processing_purpose:$('ldPurpose').value,legal_basis_or_authority:$('ldBasis').value,identity_verified:$('ldIdentity').value==='true',legal_hold_present:$('ldHold').value==='true',exception_or_retention_basis:$('ldException').value,proposed_outcome:$('ldOutcome').value,reasoning:$('ldReason').value,evidence:$('ldEvidence').value,reviewer:$('ldReviewer').value,legal_references:$('ldRefs').value})});alert('Saved '+d.id+' for human review.');loadLegalRisk()}catch(e){alert(e.message)}}
+async function saveVendorRisk(){try{const d=await api('/api/vendor-assessments',{method:'POST',body:JSON.stringify({vendor_name:$('vrName').value,framework:$('vrFramework').value,service_description:$('vrService').value,data_sensitivity:+$('vrSensitivity').value,data_volume:+$('vrVolume').value,access_privilege:+$('vrAccess').value,cross_border:$('vrCross').value==='true',subprocessors:$('vrSubs').value==='true',incident_history:+$('vrIncidents').value,security_maturity:+$('vrSecurity').value,contract_controls:+$('vrContract').value,retention_controls:+$('vrRetention').value,rights_support:+$('vrRights').value,safeguards:$('vrSafeguards').value.split(',').map(x=>x.trim()).filter(Boolean),reviewer_notes:$('vrNotes').value})});alert('Saved '+d.id+'. Residual screening risk: '+d.residual_band+' ('+d.residual_score+'/100).');loadLegalRisk()}catch(e){alert(e.message)}}
+async function loadLegalRisk(){try{const pair=await Promise.all([api('/api/legal-decisions'),api('/api/vendor-assessments')]);const decisions=pair[0],vendors=pair[1];let out='<h3>Vendor assessments</h3>';out+=vendors.length?'<table><tr><th>Vendor</th><th>Framework</th><th>Inherent</th><th>Residual</th><th>Review</th></tr>'+vendors.map(v=>'<tr><td>'+esc(v.vendor_name)+'</td><td>'+esc(v.framework)+'</td><td>'+esc(v.inherent_band)+' ('+esc(v.inherent_score)+'/100)</td><td><b>'+esc(v.residual_band)+' ('+esc(v.residual_score)+'/100)</b></td><td>'+esc(v.review_status)+'</td></tr>').join('')+'</table>':'<p class="muted">No vendor assessments yet.</p>';out+='<h3 style="margin-top:24px">Legal decision records</h3>';out+=decisions.length?'<table><tr><th>ID</th><th>Framework</th><th>Request</th><th>Outcome</th><th>Review</th></tr>'+decisions.map(d=>'<tr><td>'+esc(d.id)+'</td><td>'+esc(d.framework)+'</td><td>'+esc(d.request_type)+'</td><td>'+esc(d.proposed_outcome)+'</td><td>'+esc(d.review_status)+'</td></tr>').join('')+'</table>':'<p class="muted">No legal decision records yet.</p>';out+='<p class="small muted">Illustrative screening scores only. Validate vendor answers against documentary evidence. Not legal advice, certification, a statutory DPIA or automatic onboarding approval.</p>';$('legalRiskResults').innerHTML=out}catch(e){$('legalRiskResults').textContent=e.message}}
+
 async function init(){const account=await loadAccount();if(account&&account.login_required&&!account.authenticated){const main=$('main');main.innerHTML='<div class="card"><h2>Sign-in required</h2><p>This PrivacyOps demo requires Google sign-in before you can create or view cases and consent records.</p>'+(account.login_available?'<p><a class="primary" style="display:inline-block;text-align:center;text-decoration:none;width:auto" href="/auth/login">Sign in with Google</a></p>':'<p class="notice">Google sign-in is not configured for this deployment yet. Please contact the project administrator.</p>')+'<p><a href="/privacy">Read the privacy notice</a></p></div>';return}await loadCases()}init();
 </script></body></html>
