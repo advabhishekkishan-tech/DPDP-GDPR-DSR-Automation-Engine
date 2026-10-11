@@ -230,6 +230,15 @@ The current implementation uses local SQLite for the web application's case/cons
 - consent receipts and secure consent history export
 
 
+
+## Interactive practitioner home dashboard
+
+The home dashboard is an orientation and legal-reference layer for the demo. It explains how to create a DSR case, read the simulated system actions, use human legal review, inspect verification and audit output, and explore consent and vendor-risk workflows. An interactive framework/right selector provides a plain-language research prompt for DPDP or GDPR, including provision references and official-source links.
+
+**Legal boundary:** the guide is not a complete or automatic determination of applicability. Users must confirm territorial/material scope, current commencement and rules, request facts, exceptions, deadlines and retention obligations. GDPR and DPDP are not interchangeable; selecting “Both” presents two distinct analyses and does not establish that both laws apply. The application uses mock connectors and synthetic data; verification and audit-integrity indicators describe the demo's technical checks, not the truth of source facts or legal compliance.
+
+Key official reference points include the [DPDP Act, 2023 on India Code](https://www.indiacode.nic.in/indiacode/handle/123456789/22037?view_type=browse), the [DPDP Rules, 2025 on MeitY](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025), and the [GDPR text on EUR-Lex](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng/).
+
 ## Legal decision records and vendor privacy risk screening
 
 The application includes a practitioner-facing **Legal & Vendor Risk** workspace with two separate records:
