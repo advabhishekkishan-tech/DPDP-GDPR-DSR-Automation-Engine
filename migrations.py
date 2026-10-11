@@ -71,9 +71,16 @@ def _ensure_owner_columns(conn):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN owner_id TEXT")
 
 
+
+
+def _create_legal_assessment_tables(conn):
+    conn.execute("""CREATE TABLE IF NOT EXISTS legal_decisions (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, framework TEXT NOT NULL, request_type TEXT NOT NULL, record_json TEXT NOT NULL, created_at TEXT NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS vendor_assessments (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, vendor_name TEXT NOT NULL, framework TEXT NOT NULL, score_json TEXT NOT NULL, created_at TEXT NOT NULL)""")
+
 MIGRATIONS = [
     (1, "create_core_tables", _create_core_tables),
     (2, "ensure_record_ownership_columns", _ensure_owner_columns),
+    (3, "create_legal_assessment_tables", _create_legal_assessment_tables),
 ]
 
 
