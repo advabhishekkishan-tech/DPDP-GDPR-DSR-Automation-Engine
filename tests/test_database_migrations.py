@@ -16,5 +16,5 @@ def test_migrations_are_recorded_and_repeatable():
     finally:
         conn.close()
 
-    assert versions == [1, 2]
-    assert names == ["create_core_tables", "ensure_record_ownership_columns"]
+    assert versions == [1, 2, 3]
+    assert names == ["create_core_tables", "ensure_record_ownership_columns", "create_legal_assessment_tables"]
