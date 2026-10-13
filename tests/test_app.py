@@ -411,3 +411,59 @@ def test_vendor_risk_assessment_returns_transparent_risk_and_actions(client):
     saved = client.get("/api/vendor-assessments")
     assert saved.status_code == 200
     assert any(item["id"] == body["id"] for item in saved.json())
+
+
+def test_legal_decision_can_be_linked_to_owned_dsr_case(client):
+    created = client.post("/api/cases", json={
+        "subject_email": email(), "request_type": "ERASURE",
+        "jurisdiction": "GDPR", "assurance_level": 3,
+    })
+    assert created.status_code == 200
+    case = created.json()
+    response = client.post("/api/legal-decisions", json={
+        "case_id": case["id"], "framework": "GDPR", "request_type": "ERASURE",
+        "processing_purpose": "Account administration and legal compliance",
+        "identity_verified": True, "legal_hold_present": False,
+        "proposed_outcome": "ESCALATE",
+        "reasoning": "Retention scope and any applicable exception need a documented legal review.",
+        "legal_references": "Verify GDPR Article 17 and any applicable Article 17(3) exception.",
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert body["case_id"] == case["id"]
+    assert body["linked_case"]["status"] == case["status"]
+    assert "does not execute" in body["notice"]
+    listed = client.get("/api/legal-decisions")
+    assert any(item["id"] == body["id"] and item["case_id"] == case["id"] for item in listed.json())
+
+
+def test_legal_decision_link_rejects_mismatched_request_type(client):
+    created = client.post("/api/cases", json={
+        "subject_email": email(), "request_type": "ERASURE",
+        "jurisdiction": "GDPR", "assurance_level": 3,
+    })
+    response = client.post("/api/legal-decisions", json={
+        "case_id": created.json()["id"], "framework": "GDPR", "request_type": "ACCESS",
+        "processing_purpose": "Account administration",
+        "identity_verified": True, "proposed_outcome": "ESCALATE",
+        "reasoning": "The request type must stay consistent with the linked case.",
+    })
+    assert response.status_code == 422
+    assert "must match linked case" in response.json()["detail"]
+
+
+def test_legal_decision_cannot_link_to_another_anonymous_users_case():
+    with TestClient(app) as owner_client:
+        created = owner_client.post("/api/cases", json={
+            "subject_email": email(), "request_type": "ERASURE",
+            "jurisdiction": "GDPR", "assurance_level": 3,
+        })
+        case_id = created.json()["id"]
+        with TestClient(app) as other_client:
+            response = other_client.post("/api/legal-decisions", json={
+                "case_id": case_id, "framework": "GDPR", "request_type": "ERASURE",
+                "processing_purpose": "Account administration",
+                "identity_verified": True, "proposed_outcome": "ESCALATE",
+                "reasoning": "Attempting to link another visitor's case must be rejected.",
+            })
+            assert response.status_code == 404
