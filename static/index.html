@@ -50,7 +50,7 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 <section id="legalrisk" class="view hidden">
 <div class="grid">
 <div class="card"><h2>Legal decision record</h2><p class="muted">Purpose: document why a DSR should be fulfilled, partially fulfilled, restricted, refused or escalated. This creates a reviewable legal rationale; it does not execute the action or replace a legal opinion.</p>
-<label>Link to an existing DSR case (recommended)</label><select id="ldCase" onchange="updateDecisionCaseContext()"><option value="">General assessment — no case linked</option></select>
+<label>Link to an existing DSR case (recommended)</label><select id="ldCase" onchange="updateDecisionCaseContext(true)"><option value="">General assessment — no case linked</option></select>
 <div id="ldCaseContext" class="notice" style="margin:10px 0">Choose a case to see its request type, jurisdiction and status here. Create a DSR case first if the list is empty.</div>
 <label>Legal framework to assess</label><select id="ldFramework" onchange="updateDecisionCaseContext()"><option>DPDP</option><option>GDPR</option><option>BOTH</option></select>
 <label>Request type</label><select id="ldType" onchange="updateDecisionCaseContext()"><option>ERASURE</option><option>ACCESS</option><option>RECTIFICATION</option><option>RESTRICTION</option><option>PORTABILITY</option><option>OBJECTION</option><option>WITHDRAWAL</option><option>OTHER</option></select>
@@ -113,15 +113,17 @@ async function saveVendorRisk(){try{const d=await api('/api/vendor-assessments',
 async function loadLegalRisk(){try{const pair=await Promise.all([api('/api/legal-decisions'),api('/api/vendor-assessments'),api('/api/cases')]);const decisions=pair[0],vendors=pair[1],cases=pair[2];const selected=$('ldCase').value;const caseSelect=$('ldCase');caseSelect.innerHTML='<option value="">General assessment — no case linked</option>'+cases.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.id)+' · '+esc(c.request_type)+' · '+esc(c.jurisdiction)+' · '+esc(c.status)+'</option>').join('');if(cases.some(c=>c.id===selected))caseSelect.value=selected;updateDecisionCaseContext();let out='<h3>Vendor assessments</h3>';out+=vendors.length?'<table><tr><th>Vendor</th><th>Framework</th><th>Inherent</th><th>Residual</th><th>Review</th></tr>'+vendors.map(v=>'<tr><td>'+esc(v.vendor_name)+'</td><td>'+esc(v.framework)+'</td><td>'+esc(v.inherent_band)+' ('+esc(v.inherent_score)+'/100)</td><td><b>'+esc(v.residual_band)+' ('+esc(v.residual_score)+'/100)</b></td><td>'+esc(v.review_status)+'</td></tr>').join('')+'</table>':'<p class="muted">No vendor assessments yet.</p>';out+='<h3 style="margin-top:24px">Legal decision records</h3>';out+=decisions.length?'<table><tr><th>ID</th><th>Linked DSR case</th><th>Framework</th><th>Request</th><th>Proposed outcome</th><th>Review status</th></tr>'+decisions.map(d=>'<tr><td>'+esc(d.id)+'</td><td>'+esc(d.case_id||'General / unlinked')+'</td><td>'+esc(d.framework)+'</td><td>'+esc(d.request_type)+'</td><td>'+esc(d.proposed_outcome)+'</td><td>'+esc(d.review_status)+'</td></tr>').join('')+'</table>':'<p class="muted">No legal decision records yet.</p>';out+='<p class="small muted">Legal decision records are review notes, not automatic legal conclusions or execution commands. Vendor scores are illustrative screening only, not a statutory score, certification, DPIA or automatic onboarding approval.</p>';$('legalRiskResults').innerHTML=out}catch(e){$('legalRiskResults').textContent=e.message}}
 
 
-async function updateDecisionCaseContext(){
+async function updateDecisionCaseContext(syncFromCase=false){
  const caseId=$('ldCase').value;
  if(!caseId){$('ldCaseContext').innerHTML='No case linked. You can save a general assessment, but linking a DSR case makes the reasoning easier to trace.';updateDecisionLegalPrompt();return}
  try{
   const c=await api('/api/cases/'+encodeURIComponent(caseId));
   $('ldCaseContext').innerHTML='<b>Linked case:</b> '+esc(c.id)+'<br><b>Request:</b> '+esc(c.request_type)+' · <b>Jurisdiction:</b> '+esc(c.jurisdiction)+'<br><b>Current status:</b> '+esc(c.status)+' · <b>Assurance level:</b> '+esc(c.assurance_level)+'<br><span class="small">The linked case is checked server-side against your current session. Its status is context only; it does not itself approve this legal decision.</span>';
   const supported=['ERASURE','ACCESS','RECTIFICATION','RESTRICTION','PORTABILITY','OBJECTION','WITHDRAWAL'];
-  if(supported.includes(c.request_type))$('ldType').value=c.request_type;
-  if(['DPDP','GDPR'].includes(c.jurisdiction))$('ldFramework').value=c.jurisdiction;
+  if(syncFromCase){
+   if(supported.includes(c.request_type))$('ldType').value=c.request_type;
+   if(['DPDP','GDPR'].includes(c.jurisdiction))$('ldFramework').value=c.jurisdiction;
+  }
  }catch(e){$('ldCaseContext').textContent='Unable to load this case: '+e.message}
  updateDecisionLegalPrompt();
 }
