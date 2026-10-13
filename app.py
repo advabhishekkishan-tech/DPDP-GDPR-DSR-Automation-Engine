@@ -87,6 +87,7 @@ class ApprovalSubmission(BaseModel):
 
 class LegalDecisionSubmission(BaseModel):
     framework: str = Field(pattern="^(DPDP|GDPR|BOTH)$")
+    case_id: str | None = Field(default=None, max_length=100)
     request_type: str = Field(min_length=2, max_length=40)
     processing_purpose: str = Field(min_length=3, max_length=500)
     legal_basis_or_authority: str = Field(default="", max_length=500)
@@ -392,6 +393,15 @@ def admin_activity(request: Request):
 @app.post("/api/legal-decisions")
 def create_legal_decision(payload: LegalDecisionSubmission, request: Request):
     owner_id = require_access(request)
+    linked_case = None
+    if payload.case_id:
+        # get_case scopes lookup to this visitor/account, preventing cross-user links.
+        linked_case = get_case(payload.case_id, owner_id)
+        if payload.request_type != linked_case["request_type"]:
+            raise HTTPException(
+                422,
+                detail=f"Request type must match linked case {linked_case['id']} ({linked_case['request_type']}).",
+            )
     if not payload.identity_verified and payload.proposed_outcome in {"FULFIL", "PARTIAL"}:
         raise HTTPException(422, "Identity is not verified. Escalate or resolve verification before recording fulfilment.")
     if payload.legal_hold_present and payload.proposed_outcome == "FULFIL" and not payload.exception_or_retention_basis.strip():
@@ -399,12 +409,21 @@ def create_legal_decision(payload: LegalDecisionSubmission, request: Request):
     decision_id = "LD-" + uuid4().hex[:10].upper()
     now = datetime.now(timezone.utc).isoformat()
     record = payload.model_dump()
+    if linked_case:
+        record["linked_case"] = {
+            "id": linked_case["id"],
+            "request_type": linked_case["request_type"],
+            "jurisdiction": linked_case["jurisdiction"],
+            "status": linked_case["status"],
+            "created_at": linked_case["created_at"],
+            "assurance_level": linked_case["assurance_level"],
+        }
     record.update({"id": decision_id, "created_at": now, "owner_id": owner_id,
                    "review_status": "DRAFT_FOR_HUMAN_REVIEW",
-                   "notice": "Decision aid only. Confirm law applicability, provisions and outcome through human review."})
+                   "notice": "Decision aid only. Confirm law applicability, provisions and outcome through human review. Saving this record does not execute the proposed outcome."})
     conn = db()
-    conn.execute("INSERT INTO legal_decisions (id, owner_id, framework, request_type, record_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                 (decision_id, owner_id, payload.framework, payload.request_type, json.dumps(record), now))
+    conn.execute("INSERT INTO legal_decisions (id, owner_id, framework, request_type, record_json, created_at, case_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 (decision_id, owner_id, payload.framework, payload.request_type, json.dumps(record), now, payload.case_id))
     conn.commit()
     conn.close()
     return record
