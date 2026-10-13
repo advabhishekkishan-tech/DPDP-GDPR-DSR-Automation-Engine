@@ -77,10 +77,22 @@ def _create_legal_assessment_tables(conn):
     conn.execute("""CREATE TABLE IF NOT EXISTS legal_decisions (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, framework TEXT NOT NULL, request_type TEXT NOT NULL, record_json TEXT NOT NULL, created_at TEXT NOT NULL)""")
     conn.execute("""CREATE TABLE IF NOT EXISTS vendor_assessments (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, vendor_name TEXT NOT NULL, framework TEXT NOT NULL, score_json TEXT NOT NULL, created_at TEXT NOT NULL)""")
 
+def _link_legal_decisions_to_cases(conn):
+    # Existing records remain valid and unlinked; new records may reference a case.
+    if IS_POSTGRES:
+        conn.execute("ALTER TABLE legal_decisions ADD COLUMN IF NOT EXISTS case_id TEXT")
+    else:
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(legal_decisions)")}
+        if "case_id" not in columns:
+            conn.execute("ALTER TABLE legal_decisions ADD COLUMN case_id TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_legal_decisions_case_id ON legal_decisions(case_id)")
+
+
 MIGRATIONS = [
     (1, "create_core_tables", _create_core_tables),
     (2, "ensure_record_ownership_columns", _ensure_owner_columns),
     (3, "create_legal_assessment_tables", _create_legal_assessment_tables),
+    (4, "link_legal_decisions_to_cases", _link_legal_decisions_to_cases),
 ]
 
 
