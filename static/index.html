@@ -21,11 +21,11 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 </style></head>
 <body>
 <header><h1>PrivacyOps DSR Lab</h1><p>Legal decision → Technical control → Verification → Evidence</p><div id="account" style="margin-top:14px"></div></header>
-<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button><button onclick="show('legalrisk')">Legal & Vendor Risk</button><button id="adminBtn" class="hidden" onclick="show('admin')">Activity</button></nav>
+<nav><button onclick="show('dashboard')">Dashboard</button><button onclick="show('learn')">Privacy by Design</button><button onclick="show('new')">New DSR</button><button onclick="show('consent')">Consent</button><button onclick="show('legalrisk')">Legal & Vendor Risk</button><button id="adminBtn" class="hidden" onclick="show('admin')">Activity</button></nav>
 <main>
 <div class="notice"><strong>Public proof-of-concept.</strong> Use synthetic data only. Do not enter real customer, employee, financial, health, identity or other sensitive information. <a href="/privacy" target="_blank">Read the privacy notice</a>.</div>
 <section id="dashboard" class="view">
-<div class="card hero"><p class="eyebrow">PRACTITIONER WORKSPACE · START HERE</p><h2>Turn a privacy request into a reasoned, reviewable decision.</h2><p class="lead">Use this lab to practise the legal and operational steps behind a Data Subject Request (DSR), review consent events, document legal reasoning and screen vendor privacy risks.</p><div class="actions"><button class="primary action-button" onclick="show('new')">＋ Create a DSR case</button><button class="secondary action-button" onclick="show('legalrisk')">Open legal & vendor risk</button></div><p class="small muted">Demonstration only: connected systems are simulated. Use synthetic information, never real client or customer data.</p></div>
+<div class="card hero"><p class="eyebrow">PRACTITIONER WORKSPACE · START HERE</p><h2>Turn a privacy request into a reasoned, reviewable decision.</h2><p class="lead">Use this lab to practise the legal and operational steps behind a Data Subject Request (DSR), review consent events, document legal reasoning and screen vendor privacy risks.</p><div class="actions"><button class="primary action-button" onclick="show('new')">＋ Create a DSR case</button><button class="secondary action-button" onclick="show('legalrisk')">Open legal & vendor risk</button><button class="secondary action-button" onclick="show('learn')">Understand DSR & Privacy by Design</button></div><p class="small muted">Demonstration only: connected systems are simulated. Use synthetic information, never real client or customer data.</p></div>
 <div class="grid guide-grid">
 <div class="card"><h3>How to use the lab</h3><ol class="steps"><li><b>Create a case.</b><br><span>Choose the request type, legal framework and identity-assurance level.</span></li><li><b>Read the result.</b><br><span>Review the simulated systems, proposed actions, verification and audit evidence.</span></li><li><b>Apply legal judgement.</b><br><span>Check the right, applicability, exceptions, retention and evidence before approving an outcome.</span></li><li><b>Control downstream action.</b><br><span>Use legal review before processor propagation; do not treat a successful API response as proof of legal compliance.</span></li><li><b>Preserve the record.</b><br><span>Use the evidence and audit trail to explain what happened, why, and what remains unresolved.</span></li></ol><button class="primary" onclick="show('new')">Start with a DSR</button></div>
 <div class="card"><h3>Explore the legal basis</h3><p class="muted">Select a framework and request to see a plain-language reference guide. This is a starting point for review, not an automatic legal conclusion.</p><label for="guideFramework">Framework</label><select id="guideFramework" onchange="updateLegalGuide()"><option value="GDPR">GDPR — European Union</option><option value="DPDP">DPDP Act — India</option><option value="BOTH">Compare both frameworks</option></select><label for="guideRight">Request / right</label><select id="guideRight" onchange="updateLegalGuide()"><option value="ERASURE">Erasure / deletion</option><option value="ACCESS">Access / information</option><option value="RECTIFICATION">Rectification / correction</option><option value="RESTRICTION">Restriction of processing</option><option value="PORTABILITY">Data portability</option><option value="OBJECTION">Objection</option><option value="WITHDRAWAL">Consent withdrawal</option></select><div id="legalGuide" class="legal-guide" aria-live="polite"></div></div>
@@ -36,6 +36,72 @@ pre{background:#0f172a;color:#dbeafe;padding:14px;border-radius:9px;overflow:aut
 </div>
 <div class="card"><h3>Your cases</h3><p class="muted">Cases available to the current session/account appear here. Open a case to inspect the workflow output and evidence.</p><div id="cases"></div></div>
 <div class="notice"><b>Legal accuracy note:</b> Applicability, commencement, territorial scope, exceptions, response deadlines and retention duties depend on the facts and current law. The lab does not decide these conclusively. Confirm official sources and record unresolved questions for human review.</div>
+</section>
+
+<section id="learn" class="view hidden">
+<div class="card hero"><p class="eyebrow">LEARNING CENTRE · START HERE</p>
+<h2>Privacy by Design: from an individual's rights to an operational workflow.</h2>
+<p class="lead">A data protection right is meaningful only when an organisation can identify the request, assess it correctly, take an authorised action and explain what happened. This guide introduces the terminology and logic behind the PrivacyOps DSR Lab.</p>
+<div class="actions"><button class="primary action-button" onclick="show('new')">Try the DSR workflow</button><button class="secondary action-button" onclick="show('legalrisk')">Explore legal decision records</button></div>
+<p class="small muted">Educational guide for this demo. It is not legal advice or a determination that a particular law applies.</p></div>
+<div class="grid guide-grid">
+<div class="card"><h3>1. Essential abbreviations</h3><dl class="meaning">
+<dt>DSR</dt><dd>Data Subject Request or Data Subject Rights: an operational umbrella term for a person exercising a data-protection right. Usage varies.</dd>
+<dt>DSAR</dt><dd>Usually Data Subject Access Request: a request to access personal data. Some organisations use it more broadly, so define it in context.</dd>
+<dt>PbD</dt><dd>Privacy by Design: building privacy considerations and safeguards into systems and processes from the beginning.</dd>
+<dt>PrivacyOps</dt><dd>The people, processes, governance and technology used to operate privacy obligations day to day.</dd>
+<dt>Controller / fiduciary</dt><dd>Related but not identical legal roles under different frameworks. Confirm the applicable law's definitions and responsibilities.</dd>
+<dt>Processor</dt><dd>An entity processing personal data on behalf of another organisation, as defined by the applicable framework.</dd>
+<dt>RBAC</dt><dd>Role-Based Access Control: allowing actions according to assigned roles and permissions.</dd>
+<dt>DPIA</dt><dd>Data Protection Impact Assessment. Under GDPR, Article 35 applies where processing is likely to result in high risk to individuals' rights and freedoms. It is not synonymous with every vendor-risk questionnaire.</dd>
+<dt>Audit trail</dt><dd>A record of events, decisions, actions and checks. It does not by itself prove that underlying facts are true.</dd>
+<dt>Legal hold</dt><dd>A scoped, justified preservation requirement that may affect erasure. It is not a blanket reason to reject every request.</dd>
+</dl></div>
+<div class="card"><h3>2. What happens in a DSR?</h3><ol class="steps">
+<li><b>Receive and classify.</b><br><span>Record the request and identify the right and potentially applicable legal framework.</span></li>
+<li><b>Verify identity and authority.</b><br><span>Use proportionate checks before disclosing or changing personal data.</span></li>
+<li><b>Discover relevant records.</b><br><span>Identify systems, data sources and processors likely to hold in-scope information.</span></li>
+<li><b>Assess the legal position.</b><br><span>Review exceptions, retention duties, third-party interests and genuine preservation needs.</span></li>
+<li><b>Authorise and execute.</b><br><span>Take only the action justified and approved for the relevant records.</span></li>
+<li><b>Verify the result.</b><br><span>Check that the action achieved its intended result; do not rely solely on an API success response.</span></li>
+<li><b>Respond and preserve evidence.</b><br><span>Explain the outcome, document the rationale and track unresolved processor dependencies.</span></li>
+</ol><div class="notice"><b>Not every request follows one path.</b> Identity failures, incomplete discovery, disputed facts, retention questions and processor delays should lead to a recorded pause, clarification or escalation—not a false claim of completion.</div></div>
+</div>
+<div class="card"><h3>3. Privacy by Design: principle → control → evidence</h3><p class="muted">Privacy by Design is not just a privacy notice or consent checkbox. It means anticipating privacy risks and making safeguards part of product design and operations.</p>
+<div class="grid guide-grid">
+<div class="legal-guide"><h4>Data minimisation</h4><p>Collect and retrieve only what is necessary.</p><p><b>Control:</b> targeted discovery rather than a broad export of every record.</p></div>
+<div class="legal-guide"><h4>Privacy by default</h4><p>Protect people even when they do not change default settings.</p><p><b>Control:</b> deny fulfilment when identity assurance is insufficient.</p></div>
+<div class="legal-guide"><h4>Security and least privilege</h4><p>Limit who can see records or approve high-impact actions.</p><p><b>Control:</b> role checks, approval gates and protected delivery.</p></div>
+<div class="legal-guide"><h4>Accountability and transparency</h4><p>Make decisions and outcomes explainable to authorised reviewers.</p><p><b>Control:</b> reasoned decision records and integrity-checked audit trails.</p></div>
+<div class="legal-guide"><h4>End-to-end lifecycle</h4><p>Track actions from intake through downstream systems to verification.</p><p><b>Control:</b> processor acknowledgements, retries and pending states.</p></div>
+<div class="legal-guide"><h4>Human oversight</h4><p>Do not let uncertain rules silently become legal conclusions.</p><p><b>Control:</b> escalate exceptions, retention questions and sensitive decisions.</p></div>
+</div><p><b>The PrivacyOps pattern:</b> privacy requirement → risk or failure mode → control → verification → evidence → accountable review.</p></div>
+<div class="card"><h3>4. How this lab demonstrates the idea</h3><div style="overflow-x:auto"><table><thead><tr><th>Operational problem</th><th>Prototype capability</th><th>What to inspect</th></tr></thead><tbody>
+<tr><td>Requester may not be authorised</td><td>Identity-assurance gate</td><td>Does insufficient assurance stop fulfilment?</td></tr>
+<tr><td>Records may exist across systems</td><td>Mock multi-system discovery</td><td>Are discovery and decisions kept separate?</td></tr>
+<tr><td>Records may need different outcomes</td><td>Record-level retention decisions</td><td>Are erasure, anonymisation, restriction and escalation distinguished?</td></tr>
+<tr><td>Sensitive actions need oversight</td><td>RBAC and approval workflow</td><td>Are unauthorised approvals rejected and recorded?</td></tr>
+<tr><td>Processor may not respond</td><td>Acknowledgement and retry states</td><td>Does the case remain pending when confirmation is missing?</td></tr>
+<tr><td>An action can fail silently</td><td>Post-execution verification</td><td>Does the workflow check the result?</td></tr>
+<tr><td>Decisions must be reviewable</td><td>Legal decision record and hash-chained audit</td><td>Can a reviewer inspect rationale and check chain integrity?</td></tr>
+<tr><td>Withdrawal affects downstream systems</td><td>Purpose/category matching and propagation</td><td>Are relevant systems targeted and verified?</td></tr>
+</tbody></table></div><p class="small muted">This is a prototype using synthetic data and mock connectors—not live enterprise integrations. A passing test proves only the behaviour covered under test conditions, not production readiness or legal compliance.</p></div>
+<div class="grid guide-grid"><div class="card"><h3>5. Important distinctions</h3><ul class="steps">
+<li><b>Access is not erasure.</b> Each right has its own scope, conditions and response requirements.</li>
+<li><b>Consent withdrawal is not universal deletion.</b> Assess the processing to which consent relates and any separate basis or retention duty.</li>
+<li><b>Sending an instruction is not completion.</b> Track acknowledgements and verify the result.</li>
+<li><b>An audit hash is not proof of truth.</b> Integrity checks cannot prove every event was captured or accurate.</li>
+<li><b>GDPR and DPDP are not interchangeable.</b> Assess rights, roles, exceptions, deadlines and legal tests separately.</li>
+</ul></div><div class="card"><h3>6. Privacy by Design review checklist</h3><ul class="steps">
+<li>Define purposes, data categories, systems and accountable roles.</li><li>Validate applicable law, scope, commencement, rules and deadlines.</li><li>Minimise request data and protect case records.</li><li>Test identity failures, duplicate requests and partial discovery.</li><li>Document decision criteria, exceptions and escalation boundaries.</li><li>Require authorisation for high-impact actions.</li><li>Verify outcomes and track processor dependencies.</li><li>Protect, integrity-check and appropriately retain audit evidence.</li><li>Review the design as laws, systems, vendors and purposes change.</li>
+</ul></div></div>
+<div class="card"><h3>7. Official legal references</h3><p>These official sources are starting points, not a conclusion that every provision applies to a specific case.</p><ul class="steps">
+<li><a href="https://www.indiacode.nic.in/indiacode/handle/123456789/22037?view_type=browse" target="_blank" rel="noopener noreferrer">India Code — Digital Personal Data Protection Act, 2023 ↗</a></li>
+<li><a href="https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025" target="_blank" rel="noopener noreferrer">MeitY — Digital Personal Data Protection Rules, 2025 ↗</a></li>
+<li><a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng/" target="_blank" rel="noopener noreferrer">EUR-Lex — GDPR, Regulation (EU) 2016/679 ↗</a></li>
+<li><a href="https://www.ipc.on.ca/en/privacy-organizations/privacy-by-design" target="_blank" rel="noopener noreferrer">Information and Privacy Commissioner of Ontario — Privacy by Design ↗</a></li>
+</ul><div class="notice"><b>Legal boundary:</b> Confirm territorial/material scope, commencement, current rules, facts, exceptions, retention duties and deadlines. This guide is educational, not legal advice or a compliance certification.</div>
+<div class="actions"><button class="primary action-button" onclick="show('new')">Practise with a demo DSR</button><button class="secondary action-button" onclick="show('legalrisk')">Create a legal decision record</button><button class="secondary action-button" onclick="show('consent')">Explore consent operations</button></div></div>
 </section>
 <section id="new" class="view hidden"><div class="grid"><div class="card"><h2>Create DSR case</h2>
 <label>Demo subject email</label><input id="email" value="user@example.com"><label>Request type</label>

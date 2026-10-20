@@ -4,6 +4,8 @@
 
 This project demonstrates a modular PrivacyOps architecture for turning privacy obligations into repeatable technical workflows and evidence.
 
+> **New here?** Start with the [Introduction to Data Subject Requests (DSRs) and Privacy by Design](docs/privacy-by-design-and-dsr.md) for a plain-language glossary, lifecycle walkthrough, design principles, failure paths and an explanation of how this prototype maps privacy requirements to controls and evidence.
+
 > **Portfolio scope:** This is a safe, local portfolio prototype. The web application persists demo case and consent metadata in a local SQLite database and uses mock enterprise connectors. It does not connect to production databases, CRM systems, cloud storage, Consent Managers, processors, or real data-subject records. It is not a registered Consent Manager or a production compliance platform.
 
 ## Architecture
